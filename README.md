@@ -1,0 +1,2 @@
+# Stocken-Data
+Proyecto DAW
