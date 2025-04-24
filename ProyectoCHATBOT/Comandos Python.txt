@@ -1,0 +1,19 @@
+Codigos para instalar y correr phyton en VS:
+
+Instalar phyton desde su pagina web oficial:
+	https://www.python.org/downloads/.
+	Importante que al momento de instalar este activo el .PAHT
+
+Quitar el alias de Python de Microsoft:
+	configuración/aplicaciones/configuración avanzada/Alias de ejecución de 	aplicaciones. (python.exe y python3.exe).
+
+Comprobar la instalación:
+	Python --versión / py --versión
+
+Ahora se debe ingresar al directorio en VS con el proyecto que se desee realizar y se ejecuta lo siguiente:
+	Python/py -m venv venv
+
+		Para activarlo:
+			.\venv\Scripts\actívate
+
+		
