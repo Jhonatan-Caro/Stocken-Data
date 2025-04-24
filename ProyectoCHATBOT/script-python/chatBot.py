@@ -11,11 +11,17 @@ import os
 os.environ["OPENAI_API_KEY"] = ApiGPT.OPENAI_API_KEY
 
 # 3. Conectar con la BD
-db_path = "C:/Users/suratica/Desktop/script-python/Pruebas.db"
-db = SQLDatabase.from_uri(f"sqlite:///{db_path}")
+user = "postgres"
+password = "1123860023Stocken"
+host = "localhost"
+port = "5432"
+database = "Prueba"
+
+uri = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
+db = SQLDatabase.from_uri(uri)
 
 # 4. Crear el modelo de lenguaje
-llm = ChatOpenAI(temperature=0,model_name='gpt-3.5')
+llm = ChatOpenAI(temperature=0,model_name='gpt-3.5-turbo')
 
 # 5. Crear el toolkit para usar con agentes
 toolkit = SQLDatabaseToolkit(llm=llm, db=db)

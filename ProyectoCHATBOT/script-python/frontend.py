@@ -1,4 +1,4 @@
-import chatBotHugging as cb
+import chatBot as cb
 import streamlit as st
 
 st.title("Chat BOT")

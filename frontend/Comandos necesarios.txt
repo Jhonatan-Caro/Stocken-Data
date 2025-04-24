@@ -1,0 +1,4 @@
+Es necesario siempre al momento de descargar el proyecto del repositorio instalar node para utilizar sus dependencias
+	npm install
+Y ya se podrá ejecutar nuevamente
+	npm run dev

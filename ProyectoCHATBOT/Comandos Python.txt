@@ -14,6 +14,8 @@ Ahora se debe ingresar al directorio en VS con el proyecto que se desee realizar
 	Python/py -m venv venv
 
 		Para activarlo:
+			(Si ya esta instalado, se ejecuta sin el punto)
 			.\venv\Scripts\actívate
+			(Para dejar de utiliar venv se debe escribir "exit")
 
 		
