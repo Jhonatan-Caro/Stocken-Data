@@ -4,6 +4,8 @@ import { useState } from 'react'
 import './App.css'
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import Register from './pages/Register'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 
 function Home(){
   return (
@@ -21,6 +23,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/Register" element={<Register />} />
+        <Route path="/Login" element={<Login />} />
+        <Route path="/Dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
   )
