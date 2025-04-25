@@ -11,11 +11,16 @@ import os
 os.environ["OPENAI_API_KEY"] = ApiGPT.OPENAI_API_KEY
 
 # 3. Conectar con la BD
+#user = "postgres"
+#password = "1123860023Stocken"
+#host = "localhost"
+#port = "5432"
+#database = "Prueba"
 user = "postgres"
-password = "1123860023Stocken"
+password = "3204119316caro"
 host = "localhost"
 port = "5432"
-database = "Prueba"
+database = "prueba"
 
 uri = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
 db = SQLDatabase.from_uri(uri)

@@ -2,3 +2,6 @@ Es necesario siempre al momento de descargar el proyecto del repositorio instala
 	npm install
 Y ya se podrá ejecutar nuevamente
 	npm run dev
+
+Es importante tener una ruta definida para la raiz "/", puede ser una landing page
+o una Home "En mi caso utilize una Home" que tiene un link el apartado de registro

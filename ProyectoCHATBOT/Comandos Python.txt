@@ -18,4 +18,9 @@ Ahora se debe ingresar al directorio en VS con el proyecto que se desee realizar
 			.\venv\Scripts\actívate
 			(Para dejar de utiliar venv se debe escribir "exit")
 
-		
+Es necesario instalar nuevamente todos las librerías que usa nuestro proyecto, en mi caso:
+	- pip install streamlit
+	- pip install langchain
+	- pip install -U langchain-community
+	- pip install psycopg2
+	- pip install openai
