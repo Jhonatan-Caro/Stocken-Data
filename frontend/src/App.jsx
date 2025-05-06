@@ -11,7 +11,8 @@ function Home(){
   return (
     <div className="text-center mt-10 text-2x1">
       Binevenido a Stocken Data. <br />
-      Ve a <a className="text-blue-500 underline" href="/Register">/Register</a>Para crear una cuenta
+      Ve a <a className="text-blue-500 underline" href="/Register">/Register</a>Para crear una cuenta<br />
+      Si tienes una cuenta ve a <a className="text-blue-500 underline" href="/Login">/Login</a> para iniciar sesion<br /> 
     </div>
   );
 }

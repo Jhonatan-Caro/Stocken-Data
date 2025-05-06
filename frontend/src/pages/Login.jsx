@@ -18,6 +18,7 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -25,6 +26,7 @@ export default function Login() {
 
       if (res.ok) {
         // Aquí podrías guardar un token, redirigir, etc.
+        localStorage.setItem("token", data.token); // Guardar el token en localStorage
         navigate("/Dashboard");
         setForm({ email: "", password: "" });
       }
@@ -63,6 +65,12 @@ export default function Login() {
         </button>
       </form>
       {message && <p className="mt-4 text-center text-sm text-gray-700">{message}</p>}
+      <p className="mt-4 text-center text-sm text-gray-700">
+        ¿No tienes una cuenta?{" "}
+        <a href="/Register" className="text-blue-500 underline">
+          Regístrate aquí
+        </a>
+      </p>
     </div>
   );
 }

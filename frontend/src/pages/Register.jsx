@@ -67,6 +67,12 @@ export default function Register() {
         </button>
       </form>
       {message && <p className="mt-4 text-center text-sm text-gray-700">{message}</p>}
+      <p className="mt-4 text-center text-sm text-gray-700">
+        Ya tienes una cuenta?{" "}
+        <a href="/Login" className="text-blue-500 underline">
+          Iniciar sesión
+        </a>
+      </p>
     </div>
   );
 }
