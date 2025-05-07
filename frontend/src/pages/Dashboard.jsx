@@ -1,39 +1,84 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useProductos from "../hooks/useProductos";
+import { cargarProductos } from "../hooks/useProductos";
+import FormularioProducto from "../components/FormularioProducto";  
+import TablaProductos from "../components/TablaProductos";
+
 
 export default function Dashboard(){
-    const navigate = useNavigate();
-    const token = localStorage.getItem("token");
-    const [data, setData] = useState(null);
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const [data, setData] = useState(null);
+  const [productos, setProductos] = useState([]);
+  const {
+    form,
+    setForm,
+    caracteristicas,
+    setCaracteristicas,
+    modoEditar,
+    enviarProducto,
+    eliminarProducto,
+    prepararEdicion,
+    claveFiltro,
+    setClaveFiltro,
+    filtro,
+    setFiltro,
+    productosFiltrados,
+  } = useProductos();
     
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/Login");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/Login");
+      return;
+    }
+    const fetchData = async () => {
+      try { 
+        const res = await fetch("http://localhost:4000/api/dashboard", {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          throw new Error("No autorizado");
         }
-        const fetchData = async () => {
-            try { 
-              const res = await fetch("http://localhost:4000/api/dashboard", {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                throw new Error("No autorizado");
-              }
       
-              const result = await res.json();
-              setData(result);
-            } catch (error) {
-              console.error("Error fetching data:", error);
-              navigate("/Login");
-            }
-          };
-        fetchData();      
+        const result = await res.json();
+        setData(result);
 
-    }, [navigate]);	
+        const usuarioId = result.id;
+        localStorage.setItem("usuario_id", usuarioId);
+        await cargarProductos(usuarioId, setProductos);
+
+      } catch (error) {
+          console.error("Error fetching data:", error);
+          navigate("/Login");
+        }
+    };
+    fetchData();   
+
+  }, [navigate]);	
 
 
-    return(
-        <h1>Bienvenido al dashboard</h1>
-    );
+  return(
+    <div className="contenedor">
+      <TablaProductos
+        productos={productosFiltrados}
+        prepararEdicion={prepararEdicion}
+        eliminarProducto={eliminarProducto}
+      />
+      <FormularioProducto
+        form={form}
+        setForm={setForm}
+        caracteristicas={caracteristicas}
+        setCaracteristicas={setCaracteristicas}
+        modoEditar={modoEditar}
+        enviarProducto={enviarProducto}
+        claveFiltro={claveFiltro}
+        setClaveFiltro={setClaveFiltro}
+        filtro={filtro}
+        setFiltro={setFiltro}
+      />
+    </div>
+  );
 }

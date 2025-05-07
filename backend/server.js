@@ -17,6 +17,24 @@ app.use(cors({
 
 app.use(express.json());
 
+//Endpoint para mostrar los productos
+app.get("/productos", verifyToken, async (req, res) =>   {
+  const usuarioId = req.user.id;
+  const { rows } = await pool.query("SELECT * FROM productos WHERE usuario_id = $1", [usuarioId]);
+  res.json(rows);
+});
+
+//Endpoint para insertar producto
+app.post("/productos", async (req, res) => {
+  const usuarioId = req.headers["usuario-id"];
+  const { nombre, precio, stock, caracteristicas } = req.body;
+  const result = await pool.query("INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    [usuarioId, nombre, precio, stock, caracteristicas]
+  );
+  res.json(result.rows[0]); 
+});
+
+//Endpoint para registro
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password, } = req.body;
@@ -33,6 +51,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+//Endpoint para login
 app.post("/api/login", async (req, res) => {
   try{
     const { email, password } = req.body;
@@ -59,10 +78,12 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+//Endpoint para redirigir al dashboard
 app.get("/api/dashboard", verifyToken, (req, res) => {
   res.json({ message: `Bienvenido ${req.user.email}!` });
 });
 
+//Funcion para guardar token
 function verifyToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -79,6 +100,7 @@ function verifyToken(req, res, next) {
   });
 }
 
+//Funcion para mostrar los datos al usuario 
 app.get("/api/data", verifyToken, (req, res) => {
   res.json({
     message: `Hola ${req.user.email}, aquí tienes tus datos protegidos`,	
