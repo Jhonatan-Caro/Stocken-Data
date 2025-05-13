@@ -17,16 +17,16 @@ os.environ["OPENAI_API_KEY"] = ApiGPT.OPENAI_API_KEY
 #port = "5432"
 #database = "Prueba"
 user = "postgres"
-password = "3204119316caro"
+password = "1123860023stocken"
 host = "localhost"
 port = "5432"
-database = "prueba"
+database = "stocken"
 
 uri = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
 db = SQLDatabase.from_uri(uri)
 
 # 4. Crear el modelo de lenguaje
-llm = ChatOpenAI(temperature=0,model_name='gpt-3.5-turbo')
+llm = ChatOpenAI(temperature=1,model_name='gpt-3.5-turbo')
 
 # 5. Crear el toolkit para usar con agentes
 toolkit = SQLDatabaseToolkit(llm=llm, db=db)

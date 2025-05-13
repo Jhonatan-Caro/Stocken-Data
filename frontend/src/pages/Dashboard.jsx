@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useProductos from "../hooks/useProductos";
-import { cargarProductos } from "../hooks/useProductos";
+//import { cargarProductos } from "../hooks/useProductos";
 import FormularioProducto from "../components/FormularioProducto";  
 import TablaProductos from "../components/TablaProductos";
-
 
 export default function Dashboard(){
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const [data, setData] = useState(null);
-  const [productos, setProductos] = useState([]);
   const {
     form,
     setForm,
@@ -25,6 +23,8 @@ export default function Dashboard(){
     filtro,
     setFiltro,
     productosFiltrados,
+    cargarProductos,
+    setProductos,
   } = useProductos();
     
   useEffect(() => {
@@ -46,9 +46,8 @@ export default function Dashboard(){
         const result = await res.json();
         setData(result);
 
-        const usuarioId = result.id;
-        localStorage.setItem("usuario_id", usuarioId);
-        await cargarProductos(usuarioId, setProductos);
+        const productos = await cargarProductos();
+        setProductos(productos);
 
       } catch (error) {
           console.error("Error fetching data:", error);
