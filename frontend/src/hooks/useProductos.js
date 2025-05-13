@@ -1,29 +1,9 @@
 import { useState } from "react";
 
+//la definicion de la API esta bien
 const api = "http://localhost:4000/productos";
-
-//Cargar productos
-export const cargarProductos = async (usuarioId, setProductos) => {
-    const token = localStorage.getItem("token");
-    try {
-        const res = await fetch(api, {
-        method: "GET",
-        headers: { 
-            "Authorization": `Bearer ${token}`, 
-        },
-        });
-          
-        if (!res.ok) {
-            const texto = await res.text();
-            throw new Error(`Error HTTP ${res.status}: ${texto}`);
-        }
-        
-        const data = await res.json();
-        setProductos(data);
-    }catch (err) {
-        console.error("Error al cargar productos:", err);
-    }
-};
+    
+//Cargar producto
 export default function useProductos(){
     const [productos, setProductos] = useState([]); // Lista de productos
     const [form, setForm] = useState({ nombre: "", precio: "", stock: "", caracteristicas: "{}" });
@@ -32,8 +12,31 @@ export default function useProductos(){
     const [productoEditando, setProductoEditando] = useState(null);
     const [filtro, setFiltro] = useState("");
     const [claveFiltro, setClaveFiltro] = useState("");
-    const usuarioId = localStorage.getItem("usuario_id");
-      
+    const token = localStorage.getItem("token");
+
+    const cargarProductos = async () => {    
+        console.log("Token encontrado:", token);
+        try {
+            const res = await fetch(api, {
+            method: "GET",
+            headers: { 
+                "Authorization": `Bearer ${token}`, 
+                //"Content-Type": "application/json",
+            },
+            });
+              
+            if (!res.ok) {
+                const texto = await res.text();
+                throw new Error(`Error HTTP ${res.status}: ${texto}`);
+            }
+            
+            const data = await res.json();
+            setProductos(data);
+            return data
+        }catch (err) {
+            console.error("Error al cargar productos:", err);
+        }
+    }; 
     //Enviar productos
     const enviarProducto = async () => {
         try {
@@ -134,6 +137,6 @@ export default function useProductos(){
         setFiltro,
         productosFiltrados,
         setProductos,
-        cargarProductos,
+        cargarProductos
     }
 }
