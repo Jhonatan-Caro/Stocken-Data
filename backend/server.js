@@ -20,19 +20,19 @@ app.use(express.json());
 //Endpoint para mostrar los productos
 app.get("/productos", verifyToken, async (req, res) =>   {
   const usuarioId = req.user.id;
-  const { rows } = await pool.query("SELECT * FROM productos WHERE usuario_id = $1", [usuarioId]);
+  const { rows } = await pool.query("SELECT * FROM productos WHERE id = $1", [usuarioId]);
   res.json(rows);
 });
 
 //Endpoint para insertar producto
-app.post("/productos", async (req, res) => {
+/*app.post("/productos", async (req, res) => {
   const usuarioId = req.headers["usuario-id"];
   const { nombre, precio, stock, caracteristicas } = req.body;
   const result = await pool.query("INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas) VALUES ($1, $2, $3, $4, $5) RETURNING *",
     [usuarioId, nombre, precio, stock, caracteristicas]
   );
   res.json(result.rows[0]); 
-});
+});*/
 
 //Endpoint para registro
 app.post("/api/register", async (req, res) => {
@@ -85,6 +85,7 @@ app.get("/api/dashboard", verifyToken, (req, res) => {
 
 //Funcion para guardar token
 function verifyToken(req, res, next) {
+  console.log("Autorization header:", req.headers["authorization"]);
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   if (!token) {
