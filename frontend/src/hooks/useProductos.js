@@ -6,7 +6,7 @@ const api = "http://localhost:4000/productos";
 //Cargar producto
 export default function useProductos(){
     const [productos, setProductos] = useState([]); // Lista de productos
-    const [form, setForm] = useState({ nombre: "", precio: "", stock: "", caracteristicas: "{}" });
+    const [form, setForm] = useState({ nombre: "", precio: "", stock: "" });
     const [caracteristicas, setCaracteristicas] = useState({});
     const [modoEditar, setModoEditar] = useState(false);
     const [productoEditando, setProductoEditando] = useState(null);
@@ -39,6 +39,16 @@ export default function useProductos(){
     }; 
     //Enviar productos
     const enviarProducto = async () => {
+        // Validación: todos los campos deben estar llenos
+        if (
+            !String(form.nombre).trim() ||
+            !String(form.precio).trim() ||
+            !String(form.stock).trim() ||
+            Object.keys(caracteristicas).length === 0
+        ) {
+            alert("Por favor completa todos los campos, incluyendo al menos una característica.");
+            return;
+        }
         try {
             const producto = {
                 ...form,
@@ -53,30 +63,38 @@ export default function useProductos(){
             const res = await fetch(url, {
                 method: metodo,
                 headers: {
+                    "Authorization": `Bearer ${token}`,
                     "Content-Type": "application/json",
-                    "usuario-id": usuarioId,
                 },
                 body: JSON.stringify(producto),
             });
           
             await res.json();
-            setForm({ nombre: "", precio: "", stock: "", caracteristicas: "{}" });
+            setForm({ nombre: "", precio: "", stock: "" });
+            setCaracteristicas({});
             setModoEditar(false);
             setProductoEditando(null);
-            cargarProductos();
+            await cargarProductos();
         }catch (err) {
                 console.error("Error al enviar producto:", err); // 🛠️ CAMBIO: Manejo de error
         }
     };
       
     //Eliminar productos
-    const eliminarProducto = async (id) => {
+    const eliminarProducto = async (id) => {    
         try {
             await fetch(`${api}/${id}`, {
                 method: "DELETE",
-                headers: { "usuario-id": usuarioId },
+                headers: { "Authorization": `Bearer ${token}`,  },
             });
-                cargarProductos();
+
+            //if (!res.ok) {
+                //const msg = await res.text();
+                //throw new Error(`Error al eliminar: ${msg}`);
+            //}
+
+            await cargarProductos();
+
         }catch (err) {
                 console.error("Error al eliminar producto:", err); // 🛠️ CAMBIO
         }
@@ -87,10 +105,12 @@ export default function useProductos(){
             nombre: producto.nombre,
             precio: producto.precio,
             stock: producto.stock,
-            caracteristicas: setCaracteristicas(producto.caracteristicas || {}),
+            caracteristicas: "",
+            //caracteristicas: setCaracteristicas(producto.caracteristicas || {}),
         });
-            setModoEditar(true);
-            setProductoEditando(producto);
+        setCaracteristicas(producto.caracteristicas || {});
+        setModoEditar(true);
+        setProductoEditando(producto);
     };
      
     const resetFormulario = () => {

@@ -12,8 +12,8 @@ export default function CaracteristicasForm({ caracteristicas, setCaracteristica
     }
   };
 
-  const actualizarValor = (clave, valorNuevo) => {
-    setCaracteristicas({ ...caracteristicas, [clave]: valorNuevo });
+  const actualizarValor = (clave, nuevoValor) => {
+    setCaracteristicas({ ...caracteristicas, [clave]: nuevoValor });
   };
 
   const eliminarCaracteristica = (clave) => {
