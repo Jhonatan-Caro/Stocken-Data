@@ -15,6 +15,7 @@ export default function FormularioProducto({
     filtro,
     setFiltro,
     productosFiltrados,
+    resetFormulario
 }){
     //Constanto para estados de las caracteristicas y tratar sus valores
     const [nuevaClave, setNuevaClave] = useState("");
@@ -114,6 +115,15 @@ export default function FormularioProducto({
             </div><br></br>
 
             <button onClick={enviarProducto} disabled={!camposCompletos}>{modoEditar ? "Guardar" : "Agregar"}</button><br></br>
+            
+            {modoEditar && (
+                <button type="button"
+                    onClick={resetFormulario}
+                >
+                Cancelar
+                </button>
+            )}
+
             <h3>Aplicar filtros de busqueda</h3>
             <select onChange={(e) => setClaveFiltro(e.target.value)}>
                 <option value="">Seleccionar campo</option>

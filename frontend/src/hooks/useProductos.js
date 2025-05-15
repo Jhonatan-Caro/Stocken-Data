@@ -157,6 +157,7 @@ export default function useProductos(){
         setFiltro,
         productosFiltrados,
         setProductos,
-        cargarProductos
+        cargarProductos,
+        resetFormulario
     }
 }

@@ -25,6 +25,7 @@ export default function Dashboard(){
     productosFiltrados,
     cargarProductos,
     setProductos,
+    resetFormulario,
   } = useProductos();
     
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function Dashboard(){
         setClaveFiltro={setClaveFiltro}
         filtro={filtro}
         setFiltro={setFiltro}
+        resetFormulario={resetFormulario}
       />
     </div>
   );
