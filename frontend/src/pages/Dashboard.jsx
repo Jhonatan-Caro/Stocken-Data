@@ -4,6 +4,7 @@ import useProductos from "../hooks/useProductos";
 //import { cargarProductos } from "../hooks/useProductos";
 import FormularioProducto from "../components/FormularioProducto";  
 import TablaProductos from "../components/TablaProductos";
+import PaginaCargaCSV from "../pages/PaginaCargaCSV";
 
 export default function Dashboard(){
   const navigate = useNavigate();
@@ -80,6 +81,7 @@ export default function Dashboard(){
         setFiltro={setFiltro}
         resetFormulario={resetFormulario}
       />
+      <button type="text" value={PaginaCargaCSV}>Subir archivo CSV</button>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import pool from "../models/db";
+import pool from "../models/db.js";
 
 export async function crearCategorias(req, res) {
     const { nombre, descripcion } = req.body
@@ -24,5 +24,4 @@ export async function obtenerCategorias (req, res) {
         console.error("Error al intentar obtener las categorias", err)
         res.status(500).json({ message:"Error al obtener las categorias" })
     }
-    
 }

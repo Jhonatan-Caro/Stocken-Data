@@ -5,3 +5,5 @@ Y ya se podrá ejecutar nuevamente
 
 Es importante tener una ruta definida para la raiz "/", puede ser una landing page
 o una Home "En mi caso utilize una Home" que tiene un link el apartado de registro
+
+Se importo una nueva dependencia para tratar con archivos CSV en el navegador: npm ls papaparse

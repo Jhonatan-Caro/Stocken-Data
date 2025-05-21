@@ -15,7 +15,7 @@ Ahora se debe ingresar al directorio en VS con el proyecto que se desee realizar
 
 		Para activarlo:
 			(Si ya esta instalado, se ejecuta sin el punto)
-			.\venv\Scripts\actívate
+			.\venv\Scripts\activate
 			(Para dejar de utiliar venv se debe escribir "exit")
 
 Es necesario instalar nuevamente todos las librerías que usa nuestro proyecto, en mi caso:

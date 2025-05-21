@@ -1,6 +1,7 @@
-import express from express;
-import { crearCategorias, obtenerCategorias } from "../controllers/categoriasController";
-import { verifyToken } from "../middleware/verifyToken";
+import express from 'express';
+import { crearCategorias, obtenerCategorias } from "../controllers/categoriasController.js";
+import { verifyToken } from "../middleware/verifyToken.js";
+
 
 const router = express.Router();
 

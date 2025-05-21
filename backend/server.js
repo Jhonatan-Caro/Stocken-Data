@@ -4,6 +4,10 @@ import userRoutes from "./routes/userRoutes.js";
 import pool from "./models/db.js";
 import bcrypt from "bcrypt";
 import jwt from  "jsonwebtoken";
+import categoriasRoutes from "./routes/categoriasRoutes.js";
+import registroRoutes from "./routes/registroRoutes.js";
+import { verifyToken } from "./middleware/verifyToken.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -56,10 +60,6 @@ app.delete("/productos/:id", verifyToken, async (req, res) => {
   res.sendStatus(204);
 });
 
-app.get("/", (req, res) => {
-  res.send("Servidor funcionando ✅");
-});
-
 //Endpoint para registro
 app.post("/api/register", async (req, res) => {
   try {
@@ -109,24 +109,6 @@ app.get("/api/dashboard", verifyToken, (req, res) => {
   res.json({ message: `Bienvenido ${req.user.email}!` });
 });
 
-//Funcion para guardar token
-function verifyToken(req, res, next) {
-  console.log("Autorization header:", req.headers["authorization"]);
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Token no proporcionado" });	
-  }
-
-  jwt.verify(token, secretKey, (err, user) => {
-    if (err) {
-      return res.status(401).json({ message: "Token inválido" });	
-    }
-    req.user = user;
-    next();
-  });
-}
-
 //Funcion para mostrar los datos al usuario 
 app.get("/api/data", verifyToken, (req, res) => {
   res.json({
@@ -139,6 +121,9 @@ app.get("/api/data", verifyToken, (req, res) => {
 });
 
 app.use("/api", userRoutes);
+app.use("/api/categorias", categoriasRoutes);
+app.use("/api/registros", registroRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.get("/", (req, res) => {
   res.send("Servidor funcionando ✅");
