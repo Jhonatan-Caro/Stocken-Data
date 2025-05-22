@@ -22,7 +22,7 @@ export function useCSV() {
         });
     }
 
-    const subirCSV = async (tipo) => {
+    const subirCSV = async (categoriaId) => {
         if(!archivoCSV) {
             console.error("No hay archivo CSV para subir");
             return;
@@ -30,8 +30,8 @@ export function useCSV() {
 
         const formData = new FormData();
         formData.append("archivo", archivoCSV);
-        if(tipo) {
-            formData.append("tipo", tipo);
+        if(categoriaId) {
+            formData.append("categoriaId", categoriaId);
         }
 
         const token = localStorage.getItem("token")

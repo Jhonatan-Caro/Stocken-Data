@@ -1,69 +1,105 @@
 import { useState } from "react";
-import { useCSV } from "../hooks/useCSV.js";
+import { useCSV } from "../hooks/useCSV";
+import { useCategorias } from "../hooks/useCategorias";
 
 export default function FormularioCSV() {
-    const [tipoTabla, setTipoTabla] = useState("");
-    const { datos, columnas, parseCSV, subirCSV } = useCSV([]);
+    const [archivo, setArchivo] = useState(null);
+    const [nombre, setNombre] = useState("");
+    const [descripcion, setDescripcion] = useState("");
+    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
+    const { categorias, crearCategoria } = useCategorias();
+    const { parseCSV, subirCSV, columnas, datos } = useCSV();
 
     const handleArchivo = (e) => {
-        const archivo = e.target.files[0];
-        if (archivo) {
-            parseCSV(archivo);
+        const file = e.target.files[0];
+        if (file) {
+            setArchivo(file);
+            parseCSV(file);
         }
-    }
+    };
 
-    const handleEnviar = async (e) => {
-        if(!tipoTabla) {
-            alert("Por favor selecciona un tipo de tabla");
-            return; 
+    const handleCrearCategoria = async () => {
+        if (!nombre || !descripcion) {
+            alert("Nombre y descripción son obligatorios");
+            return;
+        }
+        const nueva = await crearCategoria({ nombre, descripcion });
+        setCategoriaSeleccionada(nueva.id);
+        setNombre("");
+        setDescripcion("");
+    };
+
+    const handleSubir = async () => {
+        if (!categoriaSeleccionada || !archivo) {
+            alert("Debes seleccionar una categoría y un archivo");
+            return;
         }
 
-        try{
-            await subirCSV(tipoTabla);
-            alert("Archivo subido correctamente");  
-        }catch (error) {
-            console.error("Error al subir el archivo:", error);
+        try {
+            await subirCSV(categoriaSeleccionada);
+            alert("Archivo subido con éxito");
+        } catch (err) {
             alert("Error al subir el archivo");
         }
-    }
+    };
 
-    return(
-        <div className="panel">
-            <h2>Subir archivo CSV</h2>
-
-            <input type="file" accept=".csv" onChange={handleArchivo} />
-
-            <input 
-                type="text" 
-                name="Nombre de la nueva tabla" 
-                value={tipoTabla} 
-                onChange={(e) => setTipoTabla(e.target.value)}
+    return (
+        <div className="formulario">
+            <h2>Crear nueva categoría</h2>
+            <input
+                type="text"
+                placeholder="Nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
             />
+            <input
+                type="text"
+                placeholder="Descripción"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+            />
+            <button onClick={handleCrearCategoria}>Crear categoría</button>
+
+            <h3>O seleccionar una categoría existente:</h3>
+            <select
+                value={categoriaSeleccionada}
+                onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+            >
+                <option value="">--Selecciona--</option>
+                {categorias.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                        {cat.nombre}
+                    </option>
+                ))}
+            </select>
+
+            <h3>Seleccionar CSV</h3>
+            <input type="file" accept=".csv" onChange={handleArchivo} />
 
             {datos.length > 0 && (
                 <div>
-                    <h3>Previsualizacion del CSV</h3>
+                    <h3>Previsualización (primeras filas)</h3>
                     <table>
                         <thead>
                             <tr>
-                                {columnas.map((columna, index) => (
-                                    <th key={index}>{columna}</th>
+                                {columnas.map((col, i) => (
+                                    <th key={i}>{col}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {datos.slice(0,5).map((fila, index) => (
-                                <tr key={index}>
-                                    {columnas.map((columna) => (
-                                        <td key={columna}>{fila[columna]}</td>
+                            {datos.slice(0, 5).map((fila, i) => (
+                                <tr key={i}>
+                                    {columnas.map((col) => (
+                                        <td key={col}>{fila[col]}</td>
                                     ))}
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <button onClick={handleEnviar}>Crear tabla y guardar datos</button>
+                    <button onClick={handleSubir}>Subir CSV</button>
                 </div>
             )}
         </div>
-    )
+    );
 }

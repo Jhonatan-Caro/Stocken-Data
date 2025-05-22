@@ -19,7 +19,7 @@ export async function obtenerCategorias (req, res) {
 
     try{
         const result = await pool.query(`SELECT * FROM categorias_dinamicas WHERE usuario_id=$1`, [usuarioId])
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(result.rows);
     }catch(err){
         console.error("Error al intentar obtener las categorias", err)
         res.status(500).json({ message:"Error al obtener las categorias" })
