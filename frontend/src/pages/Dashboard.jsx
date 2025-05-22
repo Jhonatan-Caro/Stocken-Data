@@ -81,7 +81,7 @@ export default function Dashboard(){
         setFiltro={setFiltro}
         resetFormulario={resetFormulario}
       />
-      <button type="text" value={PaginaCargaCSV}>Subir archivo CSV</button>
+      <button onClick={() => navigate("/cargar-datos")}>Subir archivo CSV</button>
     </div>
   );
 }

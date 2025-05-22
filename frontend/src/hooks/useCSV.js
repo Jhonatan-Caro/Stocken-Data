@@ -34,9 +34,15 @@ export function useCSV() {
             formData.append("tipo", tipo);
         }
 
-        const respuesta = await fetch("http://localhost:4000/upload", {
+        const token = localStorage.getItem("token")
+
+        const respuesta = await fetch("http://localhost:4000/api/upload", {
             method: "POST",
             body: formData,
+            headers: {
+                Authorization: `Bearer ${token}`,
+            }
+
         })
 
         if(!respuesta.ok) {

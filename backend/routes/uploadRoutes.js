@@ -7,9 +7,9 @@ import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();   
 
-const ubload = multer({ dest: 'upload/' });
+const upload = multer({ dest: 'upload/' });
 
-router.post("/csv", verifyToken, ubload.single('archivo'), (req, res) => {
+router.post("/", verifyToken, upload.single('archivo'), (req, res) => {
     const usuarioId = req.user.id;
     const categoriaId = req.body.categoriaId;
 
