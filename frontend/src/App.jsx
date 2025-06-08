@@ -1,36 +1,45 @@
+// Importaciones necesarias
 import { useState } from 'react'
-//import reactLogo from './assets/react.svg'
-//import viteLogo from '/vite.svg'
-import './App.css'
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import Register from './pages/Register'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import PaginaCargaCSV from './pages/PaginaCargaCSV'
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 
-function Home(){
-  return (
-    <div className="text-center mt-10 text-2x1">
-      Binevenido a Stocken Data. <br />
-      Ve a <a className="text-blue-500 underline" href="/Register">/Register</a>Para crear una cuenta<br />
-      Si tienes una cuenta ve a <a className="text-blue-500 underline" href="/Login">/Login</a> para iniciar sesion<br /> 
-    </div>
-  );
-}
+// Importación validación
+import Login from './pages/validacion/Login'
+import Register from './pages/validacion/Register'
 
-function App() {
-  //const [count, setCount] = useState(0)
+//Importación de las páginas públicas	
+import Inicio from './pages/public/Inicio'
+import Planes from './pages/public/Planes'
+import SobreNosotros from './pages/public/SobreNosotros'
+import Soporte from './pages/public/Soporte'
+
+// Importación de las páginas de la aplicación/privadas
+import Dashboard from './pages/private/Dashboard'
+import PaginaCargaCSV from './pages/private/PaginaCargaCSV'
+import Ventas from './pages/private/Ventas'
+
+
+export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/Register" element={<Register />} />
-        <Route path="/Login" element={<Login />} />
-        <Route path="/Dashboard" element={<Dashboard />} />
+        {/* Redireccionar a la ruta de inicio */}
+        <Route path="/" element={<Navigate to="/inicio" replace />} />
+
+        {/* Rutas validación*/}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Rutas públicas*/}
+        <Route path="/inicio" element={<Inicio />} />
+        <Route path="/planes" element={<Planes />} />
+        <Route path="/sobre-nosotros" element={<SobreNosotros />} />
+        <Route path="/soporte" element={<Soporte />} />
+
+        {/* Rutas de la aplicación/privadas*/}
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/cargar-datos" element={<PaginaCargaCSV />}/>
+        <Route path="/ventas" element={<Ventas />} />
       </Routes>
     </Router>
   )
 }
-
-export default App

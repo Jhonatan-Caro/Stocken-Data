@@ -1,0 +1,82 @@
+/* index.css */
+
+/*
+@tailwind base;
+@tailwind components;
+@tailwind utilities; 
+*/
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* -- font: Wix Madefor Display -- */
+    font-family: "Sora", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+:root{
+    --verde: #03a696;
+    --azul: #0b3041;
+    --blanco: #fcfcfc;
+    --azul-oscuro: #061821;
+    --negro: #000000;
+    --gris: #0000004b;
+}
+
+/* ======== Colores -> Fondos ======== */
+
+.bg-custom-gris{
+    background-color: var(--gris);
+}
+
+.bg-custom-verde {
+    background-color: var(--verde);
+}
+
+.bg-custom-azul {
+    background-color: var(--azul);
+}
+
+.bg-custom-blanco {
+    background-color: var(--blanco);
+}
+
+/* Hover */
+.hover\:bg-custom-verde:hover {
+    background-color: var(--verde);
+}
+
+.hover\:bg-custom-azul:hover {
+    background-color: var(--azul);
+}
+
+/* ======== Colores -> Texto ======== */
+
+.text-custom-azul {
+    color: var(--azul);
+}
+
+.text-custom-verde {
+    color: var(--verde);
+}
+
+.text-custom-blanco {
+    color: var(--blanco);
+}
+
+.hover\:text-custom-verde:hover {
+    color: var(--verde);
+}
+
+/* ======== Colores -> Bordes ======== */
+
+.border-custom-azul {
+    border-color: var(--azul);
+}
+
+.border-custom-verde {
+    border-color: var(--verde);
+}

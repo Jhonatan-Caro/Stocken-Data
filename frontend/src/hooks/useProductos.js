@@ -81,7 +81,10 @@ export default function useProductos(){
     };
       
     //Eliminar productos
-    const eliminarProducto = async (id) => {    
+    const eliminarProducto = async (id) => {
+        const confirmacion = confirm("¿Estás seguro de que deseas eliminar este producto?");
+        if (!confirmacion) return;
+        
         try {
             await fetch(`${api}/${id}`, {
                 method: "DELETE",
@@ -158,6 +161,7 @@ export default function useProductos(){
         productosFiltrados,
         setProductos,
         cargarProductos,
-        resetFormulario
+        resetFormulario,
+        productos
     }
 }

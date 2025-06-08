@@ -8,6 +8,8 @@ import categoriasRoutes from "./routes/categoriasRoutes.js";
 import registroRoutes from "./routes/registroRoutes.js";
 import { verifyToken } from "./middleware/verifyToken.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import chatBotRoutes from "./routes/chatBotRoutes.js";
+import ventasRoutes from "./routes/ventasRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -84,7 +86,7 @@ app.post("/api/login", async (req, res) => {
 
     const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Usuario o encontrado" });
+      return res.status(401).json({ message: "Usuario no encontrado" });
     }
 
     const user = result.rows[0];
@@ -120,10 +122,21 @@ app.get("/api/data", verifyToken, (req, res) => {
   });
 });
 
+app.get("/api/user", verifyToken, async (req, res) => {
+  const usuario_id = req.user.id;
+  const result = await pool.query(`SELECT name FROM users WHERE id = $1`, [usuario_id]);
+  if (result.rows.length === 0) {
+    return res.status(401).json({ message: "Usuario no encontrado" });
+  }
+  res.json({name: result.rows[0].name})
+})
+
 app.use("/api", userRoutes);
 app.use("/api/categorias", categoriasRoutes);
 app.use("/api/registros", registroRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use(chatBotRoutes);
+app.use("/api/ventas", ventasRoutes); 
 
 app.get("/", (req, res) => {
   res.send("Servidor funcionando ✅");
