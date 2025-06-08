@@ -162,6 +162,7 @@ export default function useProductos(){
         setProductos,
         cargarProductos,
         resetFormulario,
-        productos
+        productos,
+        cargarProductos
     }
 }
