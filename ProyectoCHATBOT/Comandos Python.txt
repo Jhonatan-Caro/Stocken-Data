@@ -18,6 +18,9 @@ Ahora se debe ingresar al directorio en VS con el proyecto que se desee realizar
 			.\venv\Scripts\activate
 			(Para dejar de utiliar venv se debe escribir "exit")
 
+Para correr proyecto fastApI:
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
 Es necesario instalar nuevamente todos las librerías que usa nuestro proyecto, en mi caso:
 	- pip install streamlit
 	- pip install langchain

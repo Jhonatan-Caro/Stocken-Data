@@ -43,6 +43,25 @@ export function useCategorias() {
         }
     };
 
+    const eliminarCategoria = async (id) => {   
+        try {
+            const res = await fetch(`http://localhost:4000/api/categorias/${id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!res.ok) {
+                throw new Error("Error al eliminar categoría");
+            }
+
+            setCategorias((prev) => prev.filter((cat) => cat.id !== id));
+        } catch (err) {
+            setError("Error al eliminar categoría");
+        }
+    }
+
     useEffect(() => {
         fetchCategorias();
     }, []);
@@ -53,5 +72,6 @@ export function useCategorias() {
         error,
         fetchCategorias,
         crearCategoria,
+        eliminarCategoria
     };
 }

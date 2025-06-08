@@ -25,3 +25,21 @@ export async function obtenerCategorias (req, res) {
         res.status(500).json({ message:"Error al obtener las categorias" })
     }
 }
+
+export async function eliminarCategoria(req, res) {
+    const { id } = req.params;
+    const usuarioId = req.user.id;
+
+    try {
+        const result = await pool.query(`DELETE FROM categorias_dinamicas WHERE id=$1 AND usuario_id=$2 RETURNING *`, [id, usuarioId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Categoria no encontrada o no pertenece al usuario" });
+        }
+        
+        res.status(200).json({ message: "Categoria eliminada exitosamente" });
+    } catch (err) {
+        console.error("Error al eliminar la categoria: ", err);
+        res.status(500).json({ message: "Error al eliminar la categoria" });
+    }
+}

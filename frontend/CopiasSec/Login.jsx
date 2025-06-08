@@ -61,7 +61,7 @@ export default function Login() {
           type="submit"
           className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
         >
-          Iniciar sesións
+          Iniciar sesión
         </button>
       </form>
       {message && <p className="mt-4 text-center text-sm text-gray-700">{message}</p>}
