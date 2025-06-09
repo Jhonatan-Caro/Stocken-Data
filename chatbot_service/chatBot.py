@@ -1,11 +1,11 @@
 # 1. Cargar la bd con langchain
 from langchain_community.utilities import SQLDatabase
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_functions_agent
-#from langchain_community.agent_toolkits.sql.base import create_sql_agent
-#from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
+from langchain_community.agent_toolkits.sql.base import create_sql_agent
+from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.tools import Tool
 from dotenv import load_dotenv
 #from toolsCategorias import crear_categoria, obtener_categorias
@@ -35,20 +35,20 @@ db = SQLDatabase.from_uri(uri, engine_args={"pool_pre_ping": True})
 # 4. Crear el modelo de lenguaje
 llm = ChatOpenAI(temperature=0,model_name='gpt-4')
 
-tools = [
+# 5. Crear el toolkit para usar con agentes
+toolkit = SQLDatabaseToolkit(llm=llm, db=db)
+sql_tools = toolkit.get_tools()
+
+tools = sql_tools + [
     crear_producto,
     editar_producto,
     eliminar_producto,
-    listar_productos
 ]
 
-# 5. Crear el toolkit para usar con agentes
-#toolkit = SQLDatabaseToolkit(llm=llm, db=db)
-
-system_message = """
+system_template = """
     Eres un asistente experto en gestión de base de datos para productos y categorías.
 
-    Reglas:
+    Reglas generales:
     1. Solo puedes usar las herramientas disponibles.
     2. Siempre responde en español.
     3. Si la pregunta requiere acción, como agregar o editar, responde si fue exitosa o no.
@@ -59,36 +59,8 @@ system_message = """
     7. Usa un tono claro y amigable.
     8. Para llamar a crear_producto debes pasar un objeto con las propiedades usuario_id (int), nombre (str), precio (float), stock (int) y caracteristicas (objeto JSON). Pasa un diccionario JSON válido, no una cadena JSON en formato texto.
 
-    RECUERDA:
-    {formato}
+    Instrucciones específicas para consultas SQL:
 
-"""
-
-prompt = ChatPromptTemplate.from_messages([
-    SystemMessage(content=system_message),
-    MessagesPlaceholder(variable_name="chat_history"),
-    MessagesPlaceholder(variable_name="agent_scratchpad"),
-])
-
-# Crear el agente manualmente con soporte para funciones de OpenAI
-agent = create_openai_functions_agent(
-    llm=llm,
-    tools=tools,
-    prompt=prompt,
-)
-
-# Crear el ejecutor de agente
-agent_executor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    handle_parsing_errors=True
-)
-
-formato = """
-    Eres un asistente que responde preguntas sobre una base de datos de productos de usuarios. Cada usuario solo puede ver sus propios datos.
-
-    REGLAS:
     1. SIEMPRE incluye `usuario_id = {usuario_id}` en cualquier consulta SQL.
     2. Usa JOINs solo cuando sea necesario unir registros con sus categorías.
     3. La tabla `registros_dinamicos` contiene la columna `datos` en formato JSONB.
@@ -114,19 +86,49 @@ formato = """
     - Nombre: Uvas, Tamaño: medianas, Cantidad: 10
 
     11. Si no encuentras la clave JSON 'cantidad', busca 'stock'.
-    12. Tambien hay una tabla 'productos', contiene 'caracteristicas' que estan en formato JSON.
-    13. Si el usuario pregunta por algun producto, devolver las caracteristicas en lenguaje natural y claro para el usuario.
+    12. También hay una tabla 'productos', que contiene 'caracteristicas' en formato JSON.
+    13. Si el usuario pregunta por un producto, devuelve las características en lenguaje natural y claro para el usuario.
 
     Ahora responde la siguiente pregunta del usuario:
     \"\"\"{question}\"\"\"
     """
 
+system_prompt = SystemMessagePromptTemplate(
+    prompt=PromptTemplate(
+        input_variables=["usuario_id", "question"],
+        template=system_template
+    )
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    system_prompt,
+    MessagesPlaceholder(variable_name="chat_history"),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
+
+# Crear el agente manualmente con soporte para funciones de OpenAI
+agent = create_openai_functions_agent(
+    llm=llm,
+    tools=tools,
+    prompt=prompt,
+)
+
+# Crear el ejecutor de agente
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True,
+    handle_parsing_errors=True
+)
+
+print(db.run("SELECT * FROM productos WHERE usuario_id = 1"))
+
 def consultar_db(pregunta: str, usuario_id: int) -> str:
     try:
         resultado = agent_executor.invoke({
-            "input": f"{pregunta} (usuario_id={usuario_id})",  # lo pones claramente
-            "chat_history": [],
-            "usuario_id": usuario_id
+            "question": pregunta, # lo pones claramente
+            "usuario_id": usuario_id,
+            "chat_history": []
         })
         if isinstance(resultado, dict) and "output" in resultado:
             return resultado["output"]

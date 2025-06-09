@@ -94,15 +94,15 @@ def editar_producto(input: ProductoEditarInput) -> str:
 
 
 # Eliminar producto
-@tool(args_schema=ProductoEliminarInput)
-def eliminar_producto(input: ProductoEliminarInput) -> str:
+@tool
+def eliminar_producto(producto_id: int) -> str:
     """
-    Elimina un producto en la tabla productos con los datos proporcionados.
+    Elimina un producto en la tabla productos con el ID proporcionado.
     """
     try:
         with engine.begin() as conn:
-            conn.execute(text("DELETE FROM productos WHERE id = :producto_id"), {"producto_id": input.producto_id})
-        return f"Producto con ID {input.producto_id} eliminado correctamente."
+            conn.execute(text("DELETE FROM productos WHERE id = :producto_id"), {"producto_id": producto_id})
+        return f"Producto con ID {producto_id} eliminado correctamente."
     except Exception as e:
         return f"Error al eliminar producto: {str(e)}"
 
