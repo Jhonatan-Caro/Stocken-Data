@@ -4,9 +4,10 @@ import useProductos from "../../hooks/useProductos";
 //import { cargarProductos } from "../hooks/useProductos";
 import FormularioProducto from "../../components/FormularioProducto";  
 import TablaProductos from "../../components/TablaProductos";
-import PaginaCargaCSV from "../private/PaginaCargaCSV";
 import ChatBotWrapper from "../../componentsV/ChatBotWrapper";
 import Header from "../../componentsV/Header";
+import useAuthUser from "../../hooks/useAuthUser";
+import exportData from "../../hooks/useExportCSV";
 
 export default function Dashboard(){
 
@@ -31,13 +32,11 @@ export default function Dashboard(){
     setProductos,
     resetFormulario,
   } = useProductos();
-    
+  
+  useAuthUser();
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/Login");
-      return;
-    }
+
     const fetchData = async () => {
       try { 
         const res = await fetch("http://localhost:4000/api/dashboard", {
@@ -56,7 +55,7 @@ export default function Dashboard(){
 
       } catch (error) {
           console.error("Error fetching data:", error);
-          navigate("/Login");
+          navigate("/login");
         }
     };
     fetchData();   
@@ -85,7 +84,7 @@ export default function Dashboard(){
           </div>
           
           {/* Sección Derecha */}
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="bg-white rounded-xl shadow p-4 md:p-6 w-full max-w-4xl mx-auto">
             
             {/* Formulario Agregar Producto */}
             <h2 className="text-lg text-custom-verde font-semibold mb-2"> Agregar Producto </h2>

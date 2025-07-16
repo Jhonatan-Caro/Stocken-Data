@@ -11,7 +11,7 @@ router.post('/api/chat', verifyToken, async (req, res) => {
     console.log("Usuario ID extraído del token:", usuario_id);
 
     try{
-        const response = await fetch('http://192.168.1.135:8000/chat', {
+        const response = await fetch('http://172.30.0.1:8000/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

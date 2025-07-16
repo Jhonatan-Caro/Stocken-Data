@@ -100,9 +100,13 @@ export default function TablaRegistros() {
         throw new Error("Error al agregar el registro");
       }
 
+      //setNuevoRegistro({});
+
       await fetchRegistros(categoriaSeleccionada);
-      setMostrarFormulario(false);
-      setNuevoRegistro({});
+      //setMostrarFormulario(false);
+      setNuevoRegistro(prev =>
+        Object.fromEntries(Object.keys(prev).map(key => [key, ""]))
+      );
     } catch (err) {
       console.error("Error al agregar registro:", err);
     }
@@ -127,13 +131,28 @@ export default function TablaRegistros() {
         ))}
       </select>
       
-      <button 
-        onClick={() => setMostrarFormulario(!mostrarFormulario)}
-        className="bg-custom-verde text-white px-4 py-2 rounded hover:bg-custom-azul  bg-green-600 transition"
-      >
-        {mostrarFormulario ? "Cancelar" : "Agregar Registro"}
-      </button>  
-      
+      {mostrarFormulario ? (
+        <div className="space-x-2">
+          <button
+            onClick={() => setMostrarFormulario(false)}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setMostrarFormulario(true)}
+          className="bg-custom-verde text-white px-4 py-2 rounded hover:bg-custom-azul transition"
+        >
+          Agregar Registro
+        </button>
+      )}
+      <br></br>
+      <span className="text-xs text-gray-500 mt-1">
+          • Debe haber minimo 1 registro para agregar más registros a la categoría.
+      </span>
+
       {mostrarFormulario && Object.keys(nuevoRegistro).length > 0 && (
         <form onSubmit={handleAgregar} className="space-y-4 mt-4">
             {Object.keys(nuevoRegistro).map((key, index) => (
@@ -155,6 +174,7 @@ export default function TablaRegistros() {
             </button>
         </form>
       )}
+    
       {registros.length > 0 ? (
         <div className="overflow-auto">
           <table className="w-full mt-6 table-auto border border-gray-200 shadow-sm rounded-lg">

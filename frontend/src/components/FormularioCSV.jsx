@@ -19,7 +19,7 @@ export default function FormularioCSV() {
 
     const agregarRegistroManual = () => {
         const clavesBase = registrosManual[0]?.map(c => c.clave.trim()) || [];
-        const nuevoRegistro = clavesBase.map(clave => ({ clave, valor: "" }));
+        const nuevoRegistro = clavesBase.map(clave => ({ clave: clave, valor: "" }));
         setRegistrosManual([...registrosManual, nuevoRegistro]);
     };
 
@@ -322,6 +322,11 @@ export default function FormularioCSV() {
                     >
                         Subir CSV
                     </button>
+                    <br></br>
+                    <span className="text-xs text-gray-500 mt-1">
+                        • El Registro de la categoría se guardara con la misma organización que
+                        este cuente en el CSV.
+                    </span>
                 </div>
             )}
             

@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router-dom";
 import FormularioCSV from "../../components/FormularioCSV";
 import TablaRegistros from "../../components/TablaRegistros";
 import ChatBotWrapper from "../../componentsV/ChatBotWrapper";
 import Header from "../../componentsV/Header";
+import useAuthUser from "../../hooks/useAuthUser";
 
 export default function PaginaCargaCSV() {
-    const navigate = useNavigate();
+    useAuthUser();
 
     return (
         <div className="min-h-screen bg-gray-100">

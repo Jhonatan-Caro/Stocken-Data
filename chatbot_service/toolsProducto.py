@@ -19,10 +19,11 @@ class ProductoCrearInput(BaseModel):
     nombre: str
     precio: float
     stock: int
-    caracteristicas: Optional[dict] = {}  # Se recibe JSON decodificado
+    caracteristicas: Optional[dict] = {}
 
 class ProductoEditarInput(BaseModel):
     producto_id: int
+    usuario_id: int
     nombre: Optional[str] = None
     precio: Optional[float] = None
     stock: Optional[int] = None
@@ -30,30 +31,35 @@ class ProductoEditarInput(BaseModel):
 
 class ProductoEliminarInput(BaseModel):
     producto_id: int
+    usuario_id: int
 
 class ProductoListarInput(BaseModel):
     usuario_id: int
 
-# Crear producto
+#Crear producto
 @tool(args_schema=ProductoCrearInput)
-def crear_producto(input: ProductoCrearInput) -> str:
+def crear_producto(input: ProductoCrearInput = None, **kwargs) -> str:
     """
-    Crea un producto en la tabla productos con los datos proporcionados.
+    Crea un producto para el usuario especificado.
     """
+    if input is None and kwargs:
+        input = ProductoCrearInput(**kwargs)
     try:
         caracteristicas_json = json.dumps(input.caracteristicas or {})
         with engine.begin() as conn:
-            query = text("""
-                INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas)
-                VALUES (:usuario_id, :nombre, :precio, :stock, :caracteristicas::jsonb)
-            """)
-            conn.execute(query, {
-                "usuario_id": input.usuario_id,
-                "nombre": input.nombre,
-                "precio": input.precio,
-                "stock": input.stock,
-                "caracteristicas": caracteristicas_json
-            })
+            conn.execute(
+                text("""
+                    INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas)
+                    VALUES (:usuario_id, :nombre, :precio, :stock, :caracteristicas)
+                """),
+                {
+                    "usuario_id": input.usuario_id,
+                    "nombre": input.nombre,
+                    "precio": input.precio,
+                    "stock": input.stock,
+                    "caracteristicas": caracteristicas_json,  # No agregues ::jsonb aquí, hazlo en el SQL, si quieres
+                }
+            )
         return f"Producto '{input.nombre}' creado correctamente."
     except Exception as e:
         return f"Error al crear producto: {str(e)}"
@@ -61,14 +67,15 @@ def crear_producto(input: ProductoCrearInput) -> str:
 
 # Editar producto
 @tool(args_schema=ProductoEditarInput)
-def editar_producto(input: ProductoEditarInput) -> str:
+def editar_producto(input: ProductoEditarInput = None, **kwargs) -> str:
     """
-    Edita un producto en la tabla productos con los datos proporcionados.
+    Edita un producto solo si pertenece al usuario especificado.
     """
+    if input is None and kwargs:
+        input = ProductoEditarInput(**kwargs)
     try:
         updates = []
-        params = {"producto_id": input.producto_id}
-        
+        params = {"producto_id": input.producto_id, "usuario_id": input.usuario_id}
         if input.nombre is not None:
             updates.append("nombre = :nombre")
             params["nombre"] = input.nombre
@@ -79,30 +86,38 @@ def editar_producto(input: ProductoEditarInput) -> str:
             updates.append("stock = :stock")
             params["stock"] = input.stock
         if input.caracteristicas is not None:
-            params["caracteristicas"] = json.dumps(input.caracteristicas)
             updates.append("caracteristicas = :caracteristicas::jsonb")
-        
+            params["caracteristicas"] = json.dumps(input.caracteristicas)
         if not updates:
             return "No se proporcionaron campos para actualizar."
-        
-        query = f"UPDATE productos SET {', '.join(updates)} WHERE id = :producto_id"
+        query = f"UPDATE productos SET {', '.join(updates)} WHERE id = :producto_id AND usuario_id = :usuario_id"
         with engine.begin() as conn:
-            conn.execute(text(query), params)
+            result = conn.execute(text(query), params)
+        if result.rowcount == 0:
+            return "No tienes permiso para editar este producto o el producto no existe."
         return f"Producto con ID {input.producto_id} actualizado correctamente."
     except Exception as e:
         return f"Error al actualizar producto: {str(e)}"
 
 
 # Eliminar producto
-@tool
-def eliminar_producto(producto_id: int) -> str:
+@tool(args_schema=ProductoEliminarInput)
+def eliminar_producto(input: ProductoEliminarInput = None, **kwargs) -> str:
     """
-    Elimina un producto en la tabla productos con el ID proporcionado.
+    Elimina un producto de la base de datos SOLO si pertenece al usuario.
     """
+    # compatibilidad universal: acepta input Pydantic o kwargs
+    if input is None and kwargs:
+        input = ProductoEliminarInput(**kwargs)
     try:
         with engine.begin() as conn:
-            conn.execute(text("DELETE FROM productos WHERE id = :producto_id"), {"producto_id": producto_id})
-        return f"Producto con ID {producto_id} eliminado correctamente."
+            result = conn.execute(
+                text("DELETE FROM productos WHERE id = :producto_id AND usuario_id = :usuario_id"),
+                {"producto_id": input.producto_id, "usuario_id": input.usuario_id}
+            )
+        if result.rowcount == 0:
+            return "No tienes permiso para eliminar este producto o el producto no existe."
+        return f"Producto con ID {input.producto_id} eliminado correctamente."
     except Exception as e:
         return f"Error al eliminar producto: {str(e)}"
 
