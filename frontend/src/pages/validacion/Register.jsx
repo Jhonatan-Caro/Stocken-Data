@@ -19,6 +19,7 @@ export default function SignUp() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("");
 
   // Función para manejar los valores en el formulario
   const validateForm = (campo, valor) => {
@@ -54,6 +55,7 @@ export default function SignUp() {
 
     // Validación de errores antes de enviar el formulario
     setMessage(""); // Limpiar mensajes previos
+    setStatus(0);
     const hasErrors = Object.values(errors).some((message) => message !== "");
     if (hasErrors) {
       setMessage("Por favor, corrige los errores antes de enviar el formulario");
@@ -74,9 +76,11 @@ export default function SignUp() {
       if (res.ok) {
         setForm({ name: "", email: "", password: "", confirmPassword: "" });
         setAcceptedTerms(false);
+        setStatus(201);
       }
     } catch (err) {
       setMessage("Error al conectarse con el servidor");
+      setStatus(500);
     }
   };
 
@@ -202,7 +206,11 @@ export default function SignUp() {
           {/* Mensaje de error o éxito */}
           <div>
             {message && (
-              <p className="text-center text-red-500 mt-4">
+              <p
+                className={`text-center mt-4 ${
+                  status === 201 ? 'text-green-500' : 'text-red-500'
+                }`}
+              >
                 {message}
               </p>
             )}

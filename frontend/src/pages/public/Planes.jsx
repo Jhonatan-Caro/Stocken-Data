@@ -34,14 +34,14 @@ export default function Planes() {
                 <tr className="bg-custom-blanco border-b-2 border-custom-azul">
                   <td className="border-r-2 border-custom-azul px-4 py-6">Básico</td>
                   <td className="border-r-2 border-custom-azul px-4 py-6">60€</td>
-                  <td className="border-r-2 border-custom-azul px-4 py-6">Soporte estándar, Almacenamiento Limitado.</td>
-                  <td className="px-4 py-6">Uso Personal</td>
+                  <td className="border-r-2 border-custom-azul px-4 py-6">Soporte estándar, almacenamiento limitado y alguna funcionalidad extra.</td>
+                  <td className="px-4 py-6">Perfecto para negocios pequeños que necesitan control de stock básico.</td>
                 </tr>
                 <tr className="bg-custom-blanco border-b-2 border-custom-azul">
                   <td className="border-r-2 border-custom-azul px-6 py-6">Profesional</td>
                   <td className="border-r-2 border-custom-azul px-4 py-6">600€</td>
-                  <td className="border-r-2 border-custom-azul px-4 py-6">Almacenamiento ilimitado, Actualizaciones Completas y Soporte prioritario.</td>
-                  <td className="px-4 py-6">Pequeños negocios y Autónomos.</td>
+                  <td className="border-r-2 border-custom-azul px-4 py-6">Almacenamiento ilimitado, actualizaciones completas, soporte prioritario y mejora de IA.</td>
+                  <td className="px-4 py-6">PYMES y Autónomos.</td>
                 </tr>
                 <tr className="bg-custom-blanco">
                   <td className="border-r-2 border-custom-azul px-6 py-6">Personalizado</td>

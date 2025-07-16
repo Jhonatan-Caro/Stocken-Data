@@ -10,6 +10,7 @@ import { verifyToken } from "./middleware/verifyToken.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import chatBotRoutes from "./routes/chatBotRoutes.js";
 import ventasRoutes from "./routes/ventasRoutes.js";
+import exportRoutes from "./routes/exportRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -67,6 +68,11 @@ app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password, } = req.body;
 
+    const emailExist = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+    if(emailExist.rows.length > 0){
+      return res.status(400).json({message: "El correo ingresado ya ha sido registrado."});
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(`INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *`, [name, email, hashedPassword]);
@@ -111,6 +117,11 @@ app.get("/api/dashboard", verifyToken, (req, res) => {
   res.json({ message: `Bienvenido ${req.user.email}!` });
 });
 
+//Función para autenticar el Token
+app.get("/api/tokenVerify", verifyToken, (req, res) => {
+  res.status(200).json({valid: true, user: req.user});
+});
+
 //Funcion para mostrar los datos al usuario 
 app.get("/api/data", verifyToken, (req, res) => {
   res.json({
@@ -136,7 +147,8 @@ app.use("/api/categorias", categoriasRoutes);
 app.use("/api/registros", registroRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use(chatBotRoutes);
-app.use("/api/ventas", ventasRoutes); 
+app.use("/api/ventas", ventasRoutes);
+//app.use("/api/exportarProducto", exportRoutes) 
 
 app.get("/", (req, res) => {
   res.send("Servidor funcionando ✅");

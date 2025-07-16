@@ -18,7 +18,7 @@ export default function SobreNosotros() {
       <main className="min-h-screen flex justify-center items-center pt-10">
 
         {/* Contenedor Principal -> / 2 Columnas*/}
-        <div className="w-full mx-auto flex flex-col px-10 text-sm gap-20 / lg:px-60 lg:flex-row lg:gap-10">
+        <div className="w-full mx-auto flex flex-col px-10 text-sm gap-20 / lg:px-60 lg:flex-row lg:gap-10 pt-20">
 
           {/* Columna izquierda: Sobre Nosotros */}
           <div className="w-full lg:w-1/2 space-y-4">

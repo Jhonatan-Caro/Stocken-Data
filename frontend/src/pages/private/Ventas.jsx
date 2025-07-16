@@ -2,8 +2,11 @@ import Ventas from "../../components/Ventas";
 import VentasDinamicas from "../../components/VentasDinamicas";
 import ChatBotWrapper from "../../componentsV/ChatBotWrapper";
 import Header from "../../componentsV/Header";
+import useAuthUser from "../../hooks/useAuthUser";
 
 export default function PaginaVentas() {
+  useAuthUser();
+  
   return (
     <div className="min-h-screen bg-gray-50">
     

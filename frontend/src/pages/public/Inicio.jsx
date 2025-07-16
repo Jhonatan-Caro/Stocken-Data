@@ -16,13 +16,13 @@ export default function Inicio() {
   return (
     <div className="bg-gray-50">
       {/* MENU */}
-      <div className="fixed top-0 left-0 w-full z-50"><Menu /></div>
+      <div className="fixed top-0 left-0 w-full z-50 "><Menu /></div>
 
       {/* MAIN */}
       <main className="min-h-screen flex justify-center items-center pt-40 / lg:pt-20">
         
         {/* Contenedor Principal -> / 2 Columnas*/}
-        <div className="w-full mx-auto flex flex-col px-10 text-sm gap-10 / lg:px-60 lg:flex-row">
+        <div className="w-full mx-auto flex flex-col px-10 text-sm gap-10 / lg:px-60 lg:flex-row pt-20">
 
           {/* Columna izquierda: Título */}
           <div className="text-justify w-full lg:w-1/2">

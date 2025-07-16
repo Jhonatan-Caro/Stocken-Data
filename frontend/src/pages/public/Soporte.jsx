@@ -17,7 +17,7 @@ export default function Soporte() {
       <main className="min-h-screen flex justify-center items-center pt-10">
 
         {/* Contenedor principal responsive */}
-        <div className="w-full px-10 flex flex-col lg:flex-row gap-10 / lg:px-60 lg:gap-10 text-sm">
+        <div className="w-full px-10 flex flex-col lg:flex-row gap-10 / lg:px-60 lg:gap-10 text-sm pt-20">
 
           {/* Columna izquierda: SOPORTE */}
           <div className="w-full lg:w-1/2">
