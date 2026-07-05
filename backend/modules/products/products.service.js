@@ -137,7 +137,13 @@ export async function remove(productId, userId) {
   }
 }
 
-export async function bulkInsertFromCSV(userId, categoryId, filas, mapping) {
+export async function bulkInsertFromCSV(
+  userId,
+  categoryId,
+  filas,
+  mapping,
+  filename,
+) {
   const id = assertCategoryId(categoryId);
 
   if (!Array.isArray(filas) || filas.length === 0) {
@@ -164,11 +170,13 @@ export async function bulkInsertFromCSV(userId, categoryId, filas, mapping) {
     await assertCategoryBelongsToUser(client, id, userId);
 
     // Registrar el import para trazabilidad
+    // source guarda el nombre del CSV subido; la columna es VARCHAR(64)
+    const source = (filename?.trim() || "csv_products").slice(0, 64);
     const importResult = await client.query(
-      `INSERT INTO imports (user_id, source, rows_ok, rows_failed)
-       VALUES ($1, 'csv_products', 0, 0)
+      `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
+       VALUES ($1, $2, $3, 0, 0)
        RETURNING id`,
-      [userId],
+      [userId, filename ?? null, source],
     );
     const importId = importResult.rows[0].id;
 

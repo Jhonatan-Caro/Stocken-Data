@@ -75,6 +75,7 @@ export async function uploadCSV(req, res) {
       categoriaId,
       filas,
       mapping,
+      req.file.originalname,
     );
 
     const status = result.rowsFailed > 0 ? 207 : 201;
