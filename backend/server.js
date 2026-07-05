@@ -1,157 +1,37 @@
 import express from "express";
 import cors from "cors";
-import userRoutes from "./routes/userRoutes.js";
-import pool from "./models/db.js";
-import bcrypt from "bcrypt";
-import jwt from  "jsonwebtoken";
-import categoriasRoutes from "./routes/categoriasRoutes.js";
-import registroRoutes from "./routes/registroRoutes.js";
-import { verifyToken } from "./middleware/verifyToken.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
-import chatBotRoutes from "./routes/chatBotRoutes.js";
-import ventasRoutes from "./routes/ventasRoutes.js";
-import exportRoutes from "./routes/exportRoutes.js";
+import authRoutes from "./modules/auth/auth.routes.js";
+import productsRoutes from "./modules/products/products.routes.js";
+import categoriasRoutes from "./modules/categorys/categorias.routes.js";
+import ventasRoutes from "./modules/sales/ventas.routes.js";
+import chatBotRoutes from "./modules/chatbot/chatbot.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const secretKey = process.env.SECRET_KEY
 
-app.use(cors({
-  origin: "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
-//Endpoint para mostrar los productos
-app.get("/productos", verifyToken, async (req, res) =>   {
-  const usuarioId = req.user.id;
-  const { rows } = await pool.query("SELECT * FROM productos WHERE usuario_id = $1", [usuarioId]);
-  res.json(rows);
-});
-
-//Endpoint para insertar producto
-app.post("/productos", verifyToken, async (req, res) => {
-  const usuarioId = req.user.id;
-  const { nombre, precio, stock, caracteristicas } = req.body;
-  const result = await pool.query("INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-    [usuarioId, nombre, precio, stock, caracteristicas]
-  );
-  res.json(result.rows[0]); 
-});
-
-//Modificar producto
-app.put("/productos/:id", verifyToken, async (req, res) => {
-  const { id } = req.params;
-  const usuarioId = req.user.id;
-  const { nombre, precio, stock, caracteristicas } = req.body;
-  const result = await pool.query(
-    `UPDATE productos
-     SET nombre = $1, precio = $2, stock = $3, caracteristicas = $4
-     WHERE id = $5 AND usuario_id = $6 RETURNING *`,
-    [nombre, precio, stock, caracteristicas, id, usuarioId]
-  );
-  res.json(result.rows[0]);
-});
-
-// DELETE: Eliminar producto
-app.delete("/productos/:id", verifyToken, async (req, res) => {
-  const { id } = req.params;
-  const usuarioId = req.user.id;
-  await pool.query("DELETE FROM productos WHERE id = $1 AND usuario_id = $2", [id, usuarioId]);
-  res.sendStatus(204);
-});
-
-//Endpoint para registro
-app.post("/api/register", async (req, res) => {
-  try {
-    const { name, email, password, } = req.body;
-
-    const emailExist = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
-    if(emailExist.rows.length > 0){
-      return res.status(400).json({message: "El correo ingresado ya ha sido registrado."});
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(`INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *`, [name, email, hashedPassword]);
-    const newUser = result.rows[0];
-
-    res.status(201).json({ message: "Usuario registrado exitosamente", user: newUser });
-  } catch (error) {
-    console.error("Error al registrar el usuario:", error);
-    res.status(500).json({ message: "Error en el servidor" });
-  }
-});
-
-//Endpoint para login
-app.post("/api/login", async (req, res) => {
-  try{
-    const { email, password } = req.body;
-
-    const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Usuario no encontrado" });
-    }
-
-    const user = result.rows[0];
-
-    const valid = await bcrypt.compare(password, user.password)
-
-    if (!valid) {
-      return res.status(401).json({ message: "Contraseña incorrecta" });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email }, secretKey, { expiresIn: "1h" });
-    
-    res.json({ message: "Login exitoso", token });
-  } catch (error) {
-    console.error("Error en el login:", error);
-    res.status(500).json({ message: "Error en el servidor" });
-  }
-});
-
-//Endpoint para redirigir al dashboard
-app.get("/api/dashboard", verifyToken, (req, res) => {
-  res.json({ message: `Bienvenido ${req.user.email}!` });
-});
-
-//Función para autenticar el Token
-app.get("/api/tokenVerify", verifyToken, (req, res) => {
-  res.status(200).json({valid: true, user: req.user});
-});
-
-//Funcion para mostrar los datos al usuario 
-app.get("/api/data", verifyToken, (req, res) => {
-  res.json({
-    message: `Hola ${req.user.email}, aquí tienes tus datos protegidos`,	
-    data: [
-      { id: 1, name: "Producto A", valor: 100 },
-      { id: 2, name: "Producto B", valor: 200 },
-    ],
-  });
-});
-
-app.get("/api/user", verifyToken, async (req, res) => {
-  const usuario_id = req.user.id;
-  const result = await pool.query(`SELECT name FROM users WHERE id = $1`, [usuario_id]);
-  if (result.rows.length === 0) {
-    return res.status(401).json({ message: "Usuario no encontrado" });
-  }
-  res.json({name: result.rows[0].name})
-})
-
-app.use("/api", userRoutes);
+app.use("/api", authRoutes);
+app.use("/api/productos", productsRoutes);
 app.use("/api/categorias", categoriasRoutes);
-app.use("/api/registros", registroRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use(chatBotRoutes);
 app.use("/api/ventas", ventasRoutes);
-//app.use("/api/exportarProducto", exportRoutes) 
+app.use(chatBotRoutes);
 
 app.get("/", (req, res) => {
   res.send("Servidor funcionando ✅");
+});
+
+app.use((err, req, res, next) => {
+  console.error("Error global:", err.message, err.stack);
+  res.status(500).json({ message: err.message });
 });
 
 app.listen(PORT, () => {

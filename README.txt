@@ -1,5 +1,3 @@
-Usuario de Ubuntu: stocken - Contraseña: 1123860023stocken
-
 Cada vez que se haga cambio en el backend se debe levantar nuevamente el contenedor:
 	docker compose up --build
 

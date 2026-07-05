@@ -1,9 +1,0 @@
-Es necesario siempre al momento de descargar el proyecto del repositorio instalar node para utilizar sus dependencias
-	npm install
-Y ya se podrá ejecutar nuevamente
-	npm run dev
-
-Es importante tener una ruta definida para la raiz "/", puede ser una landing page
-o una Home "En mi caso utilize una Home" que tiene un link el apartado de registro
-
-Se importo una nueva dependencia para tratar con archivos CSV en el navegador: npm ls papaparse

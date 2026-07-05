@@ -8,7 +8,7 @@ import json
 
 load_dotenv()
 
-DB_URI = os.getenv("DB_URI")  # O construye la URI directamente como en tu ejemplo anterior
+DB_URI = os.getenv("DB_URI") 
 engine = create_engine(DB_URI)
 
 #Top registro mas vendido
@@ -25,22 +25,22 @@ def top_registros_vendidos(input: TopRegistrosInput = None, **kwargs) -> str:
     """
     if input is None and kwargs:
         input = TopRegistrosInput(**kwargs)
-    filtros = ["v.usuario_id = :usuario_id"]
-    params = {"usuario_id": input.usuario_id}
+    filtros = ["v.user_id = :user_id"]
+    params = {"user_id": input.usuario_id}
     if input.desde:
-        filtros.append("v.fecha >= :desde")
+        filtros.append("v.created_at >= :desde")
         params["desde"] = input.desde
     if input.hasta:
-        filtros.append("v.fecha <= :hasta")
+        filtros.append("v.created_at <= :hasta")
         params["hasta"] = input.hasta
     condicion = " AND ".join(filtros)
     query = f"""
-        SELECT r.datos->>'nombre' as nombre, SUM(v.cantidad) as total_vendido
-        FROM ventas v
-        JOIN registros_dinamicos r ON v.registro_id = r.id
+        SELECT r.data->>'name' as name, SUM(v.quantity) as total_sale
+        FROM sales v
+        JOIN dynamic_records r ON v.record_id = r.id
         WHERE {condicion}
-        GROUP BY nombre
-        ORDER BY total_vendido DESC
+        GROUP BY name
+        ORDER BY total_sale DESC
         LIMIT :top_n
     """
     params['top_n'] = input.top_n
@@ -63,13 +63,13 @@ def registros_menos_vendidos(input: TopRegistrosInput = None, **kwargs) -> str:
         input = TopRegistrosInput(**kwargs)
     # ... filtros y params igual que antes
     query = f"""
-        SELECT r.datos->>'nombre' as nombre, SUM(v.cantidad) as total_vendido
-        FROM ventas v
-        JOIN registros_dinamicos r ON v.registro_id = r.id
+        SELECT r.data->>'name' as name, SUM(v.quantity) as total_sale
+        FROM sales v
+        JOIN dynamic_records r ON v.record_id = r.id
         WHERE {condicion}
-        GROUP BY nombre
-        HAVING SUM(v.cantidad) > 0
-        ORDER BY total_vendido ASC
+        GROUP BY name
+        HAVING SUM(v.quantity) > 0
+        ORDER BY total_sale ASC
         LIMIT :top_n
     """
     params['top_n'] = input.top_n
@@ -96,18 +96,18 @@ def fechas_max_ventas_registro(input: FechasMaxRegistroInput = None, **kwargs) -
     if input is None and kwargs:
         input = FechasMaxRegistroInput(**kwargs)
     query = """
-        SELECT DATE(v.fecha), SUM(v.cantidad) as total_vendido
-        FROM ventas v
-        JOIN registros_dinamicos r ON v.registro_id = r.id
-        WHERE v.usuario_id = :usuario_id AND r.datos->>'nombre' = :nombre
-        GROUP BY DATE(v.fecha)
-        ORDER BY total_vendido DESC
+        SELECT DATE(v.created_at), SUM(v.quantity) as total_sale
+        FROM sales v
+        JOIN dynamic_records r ON v.record_id = r.id
+        WHERE v.user_id = :user_id AND r.data->>'name' = name
+        GROUP BY DATE(v.created_at)
+        ORDER BY total_sale DESC
         LIMIT :top_n
     """
     with engine.begin() as conn:
         rows = conn.execute(text(query), {
-            "usuario_id": input.usuario_id,
-            "nombre": input.nombre,
+            "user_id": input.usuario_id,
+            "name": input.nombre,
             "top_n": input.top_n
         }).fetchall()
     if not rows:
@@ -130,12 +130,12 @@ def resumen_ventas_por_categoria(input: ResumenCategoriaInput = None, **kwargs) 
     if input is None and kwargs:
         input = ResumenCategoriaInput(**kwargs)
     query = """
-        SELECT r.datos->>'nombre' as nombre, SUM(v.cantidad) as total_vendido
-        FROM ventas v
-        JOIN registros_dinamicos r ON v.registro_id = r.id
-        WHERE v.usuario_id = :usuario_id AND r.categoria_id = :categoria_id
-        GROUP BY nombre
-        ORDER BY total_vendido DESC
+        SELECT r.data->>'name' as name, SUM(v.quantity) as total_sale
+        FROM sales v
+        JOIN dynamic_records r ON v.record_id = r.id
+        WHERE v.user_id = :user_id AND r.category_id = :category_id
+        GROUP BY name
+        ORDER BY total_sale DESC
     """
     with engine.begin() as conn:
         filas = conn.execute(text(query), {
