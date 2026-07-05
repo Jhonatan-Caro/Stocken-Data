@@ -1,11 +1,9 @@
 services:
   db:
-    image: postgres:14
+    image: postgres:17
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1123860023stocken
-      POSTGRES_DB: stocken
+    env_file:
+      - ./.env
     ports:
       - "5432:5432"
     volumes:
@@ -16,15 +14,38 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - ./.env
     ports:
       - "4000:4000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:1123860023stocken@db:5432/stocken
-      - NODE_ENV=development
-      - PORT=4000
-      - SECRET_KEY=1123860023Stocken
     depends_on:
       - db
+      - chatbot_service
+    networks:
+      - app-network
+
+  chatbot_service:
+    build: ./chatbot_service
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
     networks:
       - app-network
 

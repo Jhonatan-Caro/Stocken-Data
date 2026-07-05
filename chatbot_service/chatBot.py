@@ -199,8 +199,6 @@ agent_executor = AgentExecutor(
     handle_parsing_errors=True
 )
 
-print(db.run("SELECT * FROM productos WHERE usuario_id = 1"))
-
 def consultar_db(pregunta: str, usuario_id: int) -> str:
     try:
         resultado = agent_executor.invoke({

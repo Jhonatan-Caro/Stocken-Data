@@ -6,10 +6,9 @@ import os
 from dotenv import load_dotenv
 import json
 
-# Cargar variables de entorno
 load_dotenv()
 
-DB_URI = os.getenv("DB_URI")  # O construye la URI directamente como en tu ejemplo anterior
+DB_URI = os.getenv("DB_URI")  
 engine = create_engine(DB_URI)
 #os.environ["DB_URI"] = DB_URI
 
@@ -49,15 +48,15 @@ def crear_producto(input: ProductoCrearInput = None, **kwargs) -> str:
         with engine.begin() as conn:
             conn.execute(
                 text("""
-                    INSERT INTO productos (usuario_id, nombre, precio, stock, caracteristicas)
-                    VALUES (:usuario_id, :nombre, :precio, :stock, :caracteristicas)
+                    INSERT INTO products (user_id, name, price, stock, features)
+                    VALUES (:user_id, :name, :price, :stock, :features::jsonb)
                 """),
                 {
-                    "usuario_id": input.usuario_id,
-                    "nombre": input.nombre,
-                    "precio": input.precio,
+                    "user_id": input.usuario_id,
+                    "name": input.nombre,
+                    "price": input.precio,
                     "stock": input.stock,
-                    "caracteristicas": caracteristicas_json,  # No agregues ::jsonb aquí, hazlo en el SQL, si quieres
+                    "features": caracteristicas_json,  # No agregues ::jsonb aquí, hazlo en el SQL, si quieres
                 }
             )
         return f"Producto '{input.nombre}' creado correctamente."
@@ -75,22 +74,22 @@ def editar_producto(input: ProductoEditarInput = None, **kwargs) -> str:
         input = ProductoEditarInput(**kwargs)
     try:
         updates = []
-        params = {"producto_id": input.producto_id, "usuario_id": input.usuario_id}
+        params = {"product_id": input.producto_id, "user_id": input.usuario_id}
         if input.nombre is not None:
-            updates.append("nombre = :nombre")
-            params["nombre"] = input.nombre
+            updates.append("name = :name")
+            params["name"] = input.name
         if input.precio is not None:
-            updates.append("precio = :precio")
-            params["precio"] = input.precio
+            updates.append("price = :price")
+            params["price"] = input.precio
         if input.stock is not None:
             updates.append("stock = :stock")
             params["stock"] = input.stock
         if input.caracteristicas is not None:
-            updates.append("caracteristicas = :caracteristicas::jsonb")
-            params["caracteristicas"] = json.dumps(input.caracteristicas)
+            updates.append("features = :features::jsonb")
+            params["features"] = json.dumps(input.caracteristicas)
         if not updates:
             return "No se proporcionaron campos para actualizar."
-        query = f"UPDATE productos SET {', '.join(updates)} WHERE id = :producto_id AND usuario_id = :usuario_id"
+        query = f"UPDATE products SET {', '.join(updates)} WHERE id = :product_id AND user_id = :user_id"
         with engine.begin() as conn:
             result = conn.execute(text(query), params)
         if result.rowcount == 0:
@@ -112,8 +111,8 @@ def eliminar_producto(input: ProductoEliminarInput = None, **kwargs) -> str:
     try:
         with engine.begin() as conn:
             result = conn.execute(
-                text("DELETE FROM productos WHERE id = :producto_id AND usuario_id = :usuario_id"),
-                {"producto_id": input.producto_id, "usuario_id": input.usuario_id}
+                text("DELETE FROM products WHERE id = :product_id AND user_id = :user_id"),
+                {"product_id": input.producto_id, "user_id": input.usuario_id}
             )
         if result.rowcount == 0:
             return "No tienes permiso para eliminar este producto o el producto no existe."
@@ -131,8 +130,8 @@ def listar_productos(input: ProductoListarInput) -> str:
     try:
         with engine.begin() as conn:
             result = conn.execute(
-                text("SELECT nombre, precio, stock, caracteristicas FROM productos WHERE usuario_id = :usuario_id"),
-                {"usuario_id": input.usuario_id}
+                text("SELECT name, price, stock, features FROM products WHERE user_id = :user_id"),
+                {"user_id": input.usuario_id}
             )
             productos = result.fetchall()
         if not productos:
