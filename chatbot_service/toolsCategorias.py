@@ -6,10 +6,9 @@ import os
 from dotenv import load_dotenv
 import json
 
-# Cargar variables de entorno
 load_dotenv()
 
-DB_URI = os.getenv("DB_URI")  # O construye la URI directamente como en tu ejemplo anterior
+DB_URI = os.getenv("DB_URI")  
 engine = create_engine(DB_URI)
 
 # CRUD Categoría Dinámica
@@ -40,10 +39,10 @@ def crear_categoria(input: CategoriaCrearInput = None, **kwargs):
         with engine.begin() as conn:
             conn.execute(
                 text("""
-                    INSERT INTO categorias_dinamicas (usuario_id, nombre, descripcion) 
-                    VALUES (:usuario_id, :nombre, :descripcion)
+                    INSERT INTO dynamic_categories (user_id, name, description) 
+                    VALUES (:user_id, :name, :description)
                 """),
-                {"usuario_id": input.usuario_id, "nombre": input.nombre, "descripcion": input.descripcion}
+                {"user_id": input.usuario_id, "name": input.nombre, "description": input.descripcion}
             )
         return f"Categoría '{input.nombre}' creada correctamente."
     except Exception as e:
@@ -59,16 +58,16 @@ def editar_categoria(input: CategoriaEditarInput = None, **kwargs):
         input = CategoriaEditarInput(**kwargs)
     try:
         updates = []
-        params = {"categoria_id": input.categoria_id, "usuario_id": input.usuario_id}
+        params = {"category_id": input.categoria_id, "user_id": input.usuario_id}
         if input.nombre is not None:
-            updates.append("nombre = :nombre")
-            params["nombre"] = input.nombre
+            updates.append("name = :name")
+            params["name"] = input.nombre
         if input.descripcion is not None:
-            updates.append("descripcion = :descripcion")
-            params["descripcion"] = input.descripcion
+            updates.append("description = :description")
+            params["description"] = input.descripcion
         if not updates:
             return "No se proporcionaron campos para actualizar."
-        query = f"UPDATE categorias_dinamicas SET {', '.join(updates)} WHERE id = :categoria_id AND usuario_id = :usuario_id"
+        query = f"UPDATE dynamic_categories SET {', '.join(updates)} WHERE id = :category_id AND user_id = :user_id"
         with engine.begin() as conn:
             result = conn.execute(text(query), params)
         if result.rowcount == 0:
@@ -88,8 +87,8 @@ def eliminar_categoria(input: CategoriaEliminarInput = None, **kwargs):
     try:
         with engine.begin() as conn:
             result = conn.execute(
-                text("DELETE FROM categorias_dinamicas WHERE id = :categoria_id AND usuario_id = :usuario_id"),
-                {"categoria_id": input.categoria_id, "usuario_id": input.usuario_id}
+                text("DELETE FROM dynamic_categories WHERE id = :category_id AND user_id = :user_id"),
+                {"category_id": input.categoria_id, "user_id": input.usuario_id}
             )
         if result.rowcount == 0:
             return "No tienes permiso para eliminar esta categoría o no existe."

@@ -1,6 +1,9 @@
 fastapi
-uvicorn
-langchain
+uvicorn[standard]
+langchain==0.2.16
+langchain-community==0.2.16
+langchain-openai==0.1.23
 openai
 psycopg2-binary
 sqlalchemy
+python-dotenv

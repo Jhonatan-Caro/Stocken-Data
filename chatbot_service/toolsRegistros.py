@@ -9,14 +9,14 @@ import json
 # Cargar variables de entorno
 load_dotenv()
 
-DB_URI = os.getenv("DB_URI")  # O construye la URI directamente como en tu ejemplo anterior
+DB_URI = os.getenv("DB_URI")  
 engine = create_engine(DB_URI)
 
 # CRUD Registros Dinámicos
 class RegistroCrearInput(BaseModel):
     categoria_id: int
     usuario_id: int
-    datos: dict              # ESTE ES EL JSON “libre/variable” que quieres guardar
+    datos: dict              
 
 class RegistroEditarInput(BaseModel):
     registro_id: int
@@ -42,13 +42,13 @@ def crear_registro_dinamico(input: RegistroCrearInput = None, **kwargs):
         with engine.begin() as conn:
             conn.execute(
                 text("""
-                    INSERT INTO registros_dinamicos (categoria_id, usuario_id, datos)
-                    VALUES (:categoria_id, :usuario_id, :datos)
+                    INSERT INTO dynamic_records (category_id, user_id, data)
+                    VALUES (:category_id, :user_id, :data)
                 """),
                 {
-                    "categoria_id": input.categoria_id,
-                    "usuario_id": input.usuario_id,
-                    "datos": datos_json
+                    "category_id": input.categoria_id,
+                    "user_id": input.usuario_id,
+                    "data": datos_json
                 }
             )
         return f"Registro guardado correctamente en la categoría {input.categoria_id}."
@@ -69,14 +69,14 @@ def editar_registro_dinamico(input: RegistroEditarInput = None, **kwargs):
         with engine.begin() as conn:
             result = conn.execute(
                 text("""
-                    UPDATE registros_dinamicos 
-                    SET datos = :datos
-                    WHERE id = :registro_id AND usuario_id = :usuario_id
+                    UPDATE dynamic_records
+                    SET data = :data
+                    WHERE id = :record_id AND user_id = :user_id
                 """),
                 {
-                    "datos": datos_json,
-                    "registro_id": input.registro_id,
-                    "usuario_id": input.usuario_id
+                    "data": datos_json,
+                    "record_id": input.registro_id,
+                    "user_id": input.usuario_id
                 }
             )
         if result.rowcount == 0:
@@ -96,8 +96,8 @@ def eliminar_registro_dinamico(input: RegistroEliminarInput = None, **kwargs):
     try:
         with engine.begin() as conn:
             result = conn.execute(
-                text("DELETE FROM registros_dinamicos WHERE id = :registro_id AND usuario_id = :usuario_id"),
-                {"registro_id": input.registro_id, "usuario_id": input.usuario_id}
+                text("DELETE FROM dynamic_records WHERE id = :record_id AND user_id = :user_id"),
+                {"record_id": input.registro_id, "user_id": input.usuario_id}
             )
         if result.rowcount == 0:
             return "No tienes permiso para eliminar este registro o no existe."

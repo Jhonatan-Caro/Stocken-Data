@@ -8,7 +8,7 @@ import json
 
 load_dotenv()
 
-DB_URI = os.getenv("DB_URI")  # O construye la URI directamente como en tu ejemplo anterior
+DB_URI = os.getenv("DB_URI") 
 engine = create_engine(DB_URI)
 
 #Top productos mas vendidos
@@ -26,22 +26,22 @@ def top_productos_vendidos(input: TopProductosInput = None, **kwargs) -> str:
     """
     if input is None and kwargs:
         input = TopProductosInput(**kwargs)
-    filtros = ["v.usuario_id = :usuario_id"]
-    params = {"usuario_id": input.usuario_id}
+    filtros = ["v.user_id = :user_id"]
+    params = {"user_id": input.usuario_id}
     if input.desde:
-        filtros.append("v.fecha >= :desde")
+        filtros.append("v.created_at >= :desde")
         params["desde"] = input.desde
     if input.hasta:
-        filtros.append("v.fecha <= :hasta")
+        filtros.append("v.created_at <= :hasta")
         params["hasta"] = input.hasta
     condicion = " AND ".join(filtros)
     query = f"""
-        SELECT p.nombre, SUM(v.cantidad) AS total_vendido, SUM(v.cantidad * p.precio) AS total_recaudado
-        FROM ventas v
-        JOIN productos p ON v.producto_id = p.id
+        SELECT p.name, SUM(v.quantity) AS total_sale, SUM(v.quantity * p.price) AS total_collected
+        FROM sales v
+        JOIN products p ON v.product_id = p.id
         WHERE {condicion}
-        GROUP BY p.nombre
-        ORDER BY total_vendido DESC
+        GROUP BY p.name
+        ORDER BY total_sale DESC
         LIMIT :top_n
     """
     params['top_n'] = input.top_n
@@ -69,23 +69,23 @@ def productos_menos_vendidos(input: BottomProductosInput = None, **kwargs) -> st
     """
     if input is None and kwargs:
         input = BottomProductosInput(**kwargs)
-    filtros = ["v.usuario_id = :usuario_id"]
-    params = {"usuario_id": input.usuario_id}
+    filtros = ["v.user_id = :user_id"]
+    params = {"user_id": input.usuario_id}
     if input.desde:
-        filtros.append("v.fecha >= :desde")
+        filtros.append("v.created_at >= :desde")
         params["desde"] = input.desde
     if input.hasta:
-        filtros.append("v.fecha <= :hasta")
+        filtros.append("v.created_at <= :hasta")
         params["hasta"] = input.hasta
     condicion = " AND ".join(filtros)
     query = f"""
-        SELECT p.nombre, SUM(v.cantidad) AS total_vendido, SUM(v.cantidad * p.precio) AS total_recaudado
-        FROM ventas v
-        JOIN productos p ON v.producto_id = p.id
+        SELECT p.name, SUM(v.quantity) AS total_sale, SUM(v.quantity * p.price) AS total_recollected
+        FROM sales v
+        JOIN products p ON v.product_id = p.id
         WHERE {condicion}
-        GROUP BY p.nombre
-        HAVING SUM(v.cantidad) > 0
-        ORDER BY total_vendido ASC
+        GROUP BY p.name
+        HAVING SUM(v.quantity) > 0
+        ORDER BY total_sale ASC
         LIMIT :bottom_n
     """
     params['bottom_n'] = input.bottom_n
@@ -113,17 +113,17 @@ def fechas_max_ventas_producto(input: TopFechasPorProductoInput = None, **kwargs
     if input is None and kwargs:
         input = TopFechasPorProductoInput(**kwargs)
     query = """
-        SELECT DATE(v.fecha), SUM(v.cantidad) AS total_vendido
-        FROM ventas v
-        WHERE v.usuario_id = :usuario_id AND v.producto_id = :producto_id
-        GROUP BY DATE(v.fecha)
-        ORDER BY total_vendido DESC
+        SELECT DATE(v.created_at), SUM(v.quantity) AS total_sale
+        FROM sales v
+        WHERE v.user_id = :user_id AND v.product_id = :product_id
+        GROUP BY DATE(v.created_at)
+        ORDER BY total_sale DESC
         LIMIT :top_n
     """
     with engine.begin() as conn:
         result = conn.execute(text(query), {
-            "usuario_id": input.usuario_id,
-            "producto_id": input.producto_id,
+            "user_id": input.usuario_id,
+            "product_id": input.producto_id,
             "top_n": input.top_n
         })
         rows = result.fetchall()
@@ -147,22 +147,22 @@ def resumen_ventas(input: AnalisisVentasInput = None, **kwargs) -> str:
     """
     if input is None and kwargs:
         input = AnalisisVentasInput(**kwargs)
-    filtros = ["v.usuario_id = :usuario_id"]
-    params = {"usuario_id": input.usuario_id}
+    filtros = ["v.user_id = :user_id"]
+    params = {"user_id": input.usuario_id}
     if input.desde:
-        filtros.append("v.fecha >= :desde")
+        filtros.append("v.created_at >= :desde")
         params["desde"] = input.desde
     if input.hasta:
-        filtros.append("v.fecha <= :hasta")
+        filtros.append("v.created_at <= :hasta")
         params["hasta"] = input.hasta
     condicion = " AND ".join(filtros)
     query = f"""
-        SELECT TO_CHAR(v.fecha, 'YYYY-MM') as mes, 
-               COUNT(*) as num_ventas, 
-               SUM(v.cantidad * p.precio) as ingresos, 
-               AVG(v.cantidad * p.precio) as ticket_medio
-        FROM ventas v
-        JOIN productos p ON v.producto_id = p.id
+        SELECT TO_CHAR(v.created_at, 'YYYY-MM') as mes, 
+               COUNT(*) as num_sales, 
+               SUM(v.quantity * p.price) as ingresos, 
+               AVG(v.quantity * p.price) as ticket_medio
+        FROM sales v
+        JOIN products p ON v.product_id = p.id
         WHERE {condicion}
         GROUP BY mes
         ORDER BY mes;
@@ -186,15 +186,15 @@ def predecir_ventas_siguiente_mes(input: AnalisisVentasInput = None, **kwargs) -
     if input is None and kwargs:
         input = AnalisisVentasInput(**kwargs)
     query = """
-        SELECT TO_CHAR(v.fecha, 'YYYY-MM') as mes, SUM(v.cantidad * p.precio) as ingresos
-        FROM ventas v
-        JOIN productos p ON v.producto_id = p.id
-        WHERE v.usuario_id = :usuario_id
+        SELECT TO_CHAR(v.created_at, 'YYYY-MM') as mes, SUM(v.quantity * p.price) as ingresos
+        FROM sales v
+        JOIN products p ON v.product_id = p.id
+        WHERE v.user_id = :user_id
         GROUP BY mes
         ORDER BY mes
     """
     with engine.begin() as conn:
-        result = conn.execute(text(query), {"usuario_id": input.usuario_id})
+        result = conn.execute(text(query), {"user_id": input.usuario_id})
         rows = result.fetchall()
     if not rows:
         return "No hay ventas históricas suficientes."
