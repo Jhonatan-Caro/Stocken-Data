@@ -67,6 +67,7 @@ export async function uploadSalesCSV(req, res) {
       userId,
       filas,
       mapping,
+      req.file.originalname,
     );
 
     const status = result.rowsFailed > 0 ? 207 : 201;

@@ -23,7 +23,7 @@ async function resolveProduct(client, userId, sku) {
 }
 
 // Importa un CSV de ventas aplicando el mapping del usuario
-export async function bulkInsertSalesFromCSV(userId, filas, mapping) {
+export async function bulkInsertSalesFromCSV(userId, filas, mapping, filename) {
   if (!Array.isArray(filas) || filas.length === 0) {
     throw { status: 400, message: "El CSV no contiene filas válidas" };
   }
@@ -54,11 +54,13 @@ export async function bulkInsertSalesFromCSV(userId, filas, mapping) {
     await client.query("BEGIN");
 
     // Registrar el import
+    // source guarda el nombre del CSV subido; la columna es VARCHAR(64)
+    const source = (filename?.trim() || "csv_sales").slice(0, 64);
     const { rows: importRows } = await client.query(
-      `INSERT INTO imports (user_id, source, rows_ok, rows_failed)
-       VALUES ($1, 'csv_sales', 0, 0)
+      `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
+       VALUES ($1, $2, $3, 0, 0)
        RETURNING id`,
-      [userId],
+      [userId, filename ?? null, source],
     );
     const importId = importRows[0].id;
 
