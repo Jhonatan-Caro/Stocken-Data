@@ -1,46 +1,32 @@
-import { parse } from "csv-parse/sync";
-import { bulkInsertFromCSV } from "./products.service.js";
+import {
+  parseUploadedFile,
+  buildColumnsResponse,
+  getSheetRows,
+} from "../../shared/importers/index.js";
+import { bulkInsertProducts } from "./products.service.js";
 
-// Parsea el buffer del CSV y devuelve array de objetos
-function parseCSVBuffer(buffer) {
-  return parse(buffer, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  });
-}
-
-// POST /api/products/columns
-// Recibe el CSV y devuelve las columnas detectadas + preview de 3 filas
-// El frontend usa esto para mostrar el mapper al usuario
+// POST /api/productos/columns
+// Recibe el archivo (CSV o XLSX) y devuelve columnas + preview de la hoja
+// por defecto, más la lista de hojas para el selector de la UI
 export async function getCSVColumns(req, res) {
   if (!req.file) {
     return res.status(400).json({ message: "No se ha subido ningún archivo" });
   }
 
-  console.log("mimetype:", req.file.mimetype);
-  console.log("buffer existe:", !!req.file.buffer);
-  console.log("buffer length:", req.file.buffer?.length);
-
   try {
-    const rows = parseCSVBuffer(req.file.buffer);
-
-    if (rows.length === 0) {
-      return res.status(400).json({ message: "El CSV está vacío" });
-    }
-
-    return res.json({
-      columns: Object.keys(rows[0]), // cabeceras detectadas
-      preview: rows.slice(0, 3), // primeras 3 filas para la UI
-    });
+    const workbook = await parseUploadedFile(req.file);
+    return res.json(buildColumnsResponse(workbook));
   } catch (err) {
-    console.error("Error al leer columnas del CSV:", err);
-    return res.status(500).json({ message: "Error al leer el archivo CSV" });
+    console.error("Error al leer columnas del archivo:", err);
+    return res.status(err.status || 500).json({
+      message: err.message || "Error al leer el archivo",
+    });
   }
 }
 
-// POST /api/products/upload
-// Recibe el CSV + mapping confirmado por el usuario e importa los productos
+// POST /api/productos/upload
+// Recibe el archivo + mapping confirmado por el usuario (+ hoja opcional
+// para XLSX) e importa los productos
 export async function uploadCSV(req, res) {
   const usuarioId = req.user.id;
   const categoriaId = req.body.categoriaId ?? req.body.category_id;
@@ -62,15 +48,17 @@ export async function uploadCSV(req, res) {
       .json({ message: "El campo mapping no es un JSON válido" });
   }
 
-  if (!mapping?.sku || !mapping?.stock) {
+  // stock es opcional: un catálogo puede no traer columna de stock (default 0)
+  if (!mapping?.sku) {
     return res.status(400).json({
-      message: 'El mapping debe incluir al menos "sku" y "stock"',
+      message: 'El mapping debe incluir al menos "sku"',
     });
   }
 
   try {
-    const filas = parseCSVBuffer(req.file.buffer);
-    const result = await bulkInsertFromCSV(
+    const workbook = await parseUploadedFile(req.file);
+    const filas = getSheetRows(workbook, req.body.sheet);
+    const result = await bulkInsertProducts(
       usuarioId,
       categoriaId,
       filas,
@@ -84,9 +72,9 @@ export async function uploadCSV(req, res) {
       ...result,
     });
   } catch (err) {
-    console.error("Error al procesar el CSV:", err);
+    console.error("Error al procesar el archivo:", err);
     return res.status(err.status || 500).json({
-      message: err.message || "Error al procesar el CSV",
+      message: err.message || "Error al procesar el archivo",
     });
   }
 }

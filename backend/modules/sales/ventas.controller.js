@@ -1,39 +1,29 @@
-import { parse } from "csv-parse/sync";
+import {
+  parseUploadedFile,
+  buildColumnsResponse,
+  getSheetRows,
+} from "../../shared/importers/index.js";
 import * as salesService from "./ventas.service.js";
 
-function parseCSVBuffer(buffer) {
-  return parse(buffer, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  });
-}
-
-// POST /api/sales/columns
-// Devuelve columnas + preview para el mapper de la UI
+// POST /api/ventas/columns
+// Devuelve columnas + preview (y hojas disponibles) para el mapper de la UI
 export async function getSalesCSVColumns(req, res) {
   if (!req.file) {
     return res.status(400).json({ message: "No se ha subido ningún archivo" });
   }
 
   try {
-    const rows = parseCSVBuffer(req.file.buffer);
-
-    if (rows.length === 0) {
-      return res.status(400).json({ message: "El CSV está vacío" });
-    }
-
-    return res.json({
-      columns: Object.keys(rows[0]),
-      preview: rows.slice(0, 3),
-    });
+    const workbook = await parseUploadedFile(req.file);
+    return res.json(buildColumnsResponse(workbook));
   } catch (err) {
-    console.error("Error al leer columnas del CSV de ventas:", err);
-    return res.status(500).json({ message: "Error al leer el archivo CSV" });
+    console.error("Error al leer columnas del archivo de ventas:", err);
+    return res.status(err.status || 500).json({
+      message: err.message || "Error al leer el archivo",
+    });
   }
 }
 
-// POST /api/sales/upload
+// POST /api/ventas/upload
 // Importa ventas, descuenta stock y registra movimientos
 export async function uploadSalesCSV(req, res) {
   const userId = req.user.id;
@@ -62,8 +52,9 @@ export async function uploadSalesCSV(req, res) {
   }
 
   try {
-    const filas = parseCSVBuffer(req.file.buffer);
-    const result = await salesService.bulkInsertSalesFromCSV(
+    const workbook = await parseUploadedFile(req.file);
+    const filas = getSheetRows(workbook, req.body.sheet);
+    const result = await salesService.bulkInsertSales(
       userId,
       filas,
       mapping,
@@ -76,9 +67,9 @@ export async function uploadSalesCSV(req, res) {
       ...result,
     });
   } catch (err) {
-    console.error("Error al procesar CSV de ventas:", err);
+    console.error("Error al procesar el archivo de ventas:", err);
     return res.status(err.status || 500).json({
-      message: err.message || "Error al procesar el CSV",
+      message: err.message || "Error al procesar el archivo",
     });
   }
 }

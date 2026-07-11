@@ -22,30 +22,30 @@ async function resolveProduct(client, userId, sku) {
   return rows[0]; // { id, stock }
 }
 
-// Importa un CSV de ventas aplicando el mapping del usuario
-export async function bulkInsertSalesFromCSV(userId, filas, mapping, filename) {
+// Importa un archivo de ventas aplicando el mapping del usuario
+export async function bulkInsertSales(userId, filas, mapping, filename) {
   if (!Array.isArray(filas) || filas.length === 0) {
-    throw { status: 400, message: "El CSV no contiene filas válidas" };
+    throw { status: 400, message: "El archivo no contiene filas válidas" };
   }
 
-  // Validar que las columnas mapeadas existen en el CSV
-  const csvColumns = Object.keys(filas[0]);
-  if (!csvColumns.includes(mapping.sku)) {
+  // Validar que las columnas mapeadas existen en el archivo
+  const fileColumns = Object.keys(filas[0]);
+  if (!fileColumns.includes(mapping.sku)) {
     throw {
       status: 400,
-      message: `La columna SKU "${mapping.sku}" no existe en el CSV`,
+      message: `La columna SKU "${mapping.sku}" no existe en el archivo`,
     };
   }
-  if (!csvColumns.includes(mapping.quantity)) {
+  if (!fileColumns.includes(mapping.quantity)) {
     throw {
       status: 400,
-      message: `La columna cantidad "${mapping.quantity}" no existe en el CSV`,
+      message: `La columna cantidad "${mapping.quantity}" no existe en el archivo`,
     };
   }
-  if (!csvColumns.includes(mapping.total)) {
+  if (!fileColumns.includes(mapping.total)) {
     throw {
       status: 400,
-      message: `La columna total "${mapping.total}" no existe en el CSV`,
+      message: `La columna total "${mapping.total}" no existe en el archivo`,
     };
   }
 
@@ -54,7 +54,7 @@ export async function bulkInsertSalesFromCSV(userId, filas, mapping, filename) {
     await client.query("BEGIN");
 
     // Registrar el import
-    // source guarda el nombre del CSV subido; la columna es VARCHAR(64)
+    // source guarda el nombre del archivo subido; la columna es VARCHAR(64)
     const source = (filename?.trim() || "csv_sales").slice(0, 64);
     const { rows: importRows } = await client.query(
       `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)

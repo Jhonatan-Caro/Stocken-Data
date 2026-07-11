@@ -137,7 +137,7 @@ export async function remove(productId, userId) {
   }
 }
 
-export async function bulkInsertFromCSV(
+export async function bulkInsertProducts(
   userId,
   categoryId,
   filas,
@@ -147,20 +147,22 @@ export async function bulkInsertFromCSV(
   const id = assertCategoryId(categoryId);
 
   if (!Array.isArray(filas) || filas.length === 0) {
-    throw { status: 400, message: "El archivo CSV no contiene filas válidas" };
+    throw { status: 400, message: "El archivo no contiene filas válidas" };
   }
 
-  const csvColumns = Object.keys(filas[0]);
-  if (!csvColumns.includes(mapping.sku)) {
+  const fileColumns = Object.keys(filas[0]);
+  if (!fileColumns.includes(mapping.sku)) {
     throw {
       status: 400,
-      message: `La columna SKU "${mapping.sku}" no existe en el CSV`,
+      message: `La columna SKU "${mapping.sku}" no existe en el archivo`,
     };
   }
-  if (!csvColumns.includes(mapping.stock)) {
+  // stock es opcional: sin mapear, los productos se importan como catálogo
+  const hasStock = Boolean(mapping.stock);
+  if (hasStock && !fileColumns.includes(mapping.stock)) {
     throw {
       status: 400,
-      message: `La columna stock "${mapping.stock}" no existe en el CSV`,
+      message: `La columna stock "${mapping.stock}" no existe en el archivo`,
     };
   }
 
@@ -170,7 +172,7 @@ export async function bulkInsertFromCSV(
     await assertCategoryBelongsToUser(client, id, userId);
 
     // Registrar el import para trazabilidad
-    // source guarda el nombre del CSV subido; la columna es VARCHAR(64)
+    // source guarda el nombre del archivo subido; la columna es VARCHAR(64)
     const source = (filename?.trim() || "csv_products").slice(0, 64);
     const importResult = await client.query(
       `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
@@ -185,43 +187,71 @@ export async function bulkInsertFromCSV(
     const errors = [];
     const insertedRows = [];
 
+    // Un SKU puede venir repetido en el archivo (p. ej. stock por almacén):
+    // se agrupa sumando el stock y fusionando el resto de campos en data.
+    const porSku = new Map();
+
     for (let i = 0; i < filas.length; i++) {
       const fila = filas[i];
 
       try {
         const sku = fila[mapping.sku]?.toString().trim();
-        const stock = parseInt(fila[mapping.stock], 10);
-
         if (!sku) throw { message: "SKU vacío" };
-        if (isNaN(stock) || stock < 0) throw { message: "Stock inválido" };
+
+        let stock = 0;
+        if (hasStock) {
+          stock = parseInt(fila[mapping.stock], 10);
+          if (isNaN(stock) || stock < 0) throw { message: "Stock inválido" };
+        }
 
         // El data JSONB guarda el row completo (payload original preservado)
         const data = { ...fila };
 
         // Una vez mapeado los campos importantes se eliminan de data para que solo vivan en db
         delete data[mapping.sku];
-        delete data[mapping.stock];
+        if (hasStock) delete data[mapping.stock];
 
         delete data.sku;
         delete data.stock;
 
+        const acumulado = porSku.get(sku);
+        if (acumulado) {
+          acumulado.stock += stock;
+          Object.assign(acumulado.data, data);
+          acumulado.rowCount++;
+        } else {
+          porSku.set(sku, { stock, data, row: i + 2, rowCount: 1 }); // +2 = fila real en el archivo
+        }
+      } catch (rowErr) {
+        rowsFailed++;
+        errors.push({ row: i + 2, error: rowErr.message }); // +2 = fila real en el CSV
+      }
+    }
+
+    // El upsert fusiona data (products.data || EXCLUDED.data) para que un
+    // import de stock no borre los atributos del catálogo, y solo toca el
+    // stock cuando la columna vino mapeada.
+    const stockUpdate = hasStock ? "stock = EXCLUDED.stock," : "";
+
+    for (const [sku, { stock, data, row, rowCount }] of porSku) {
+      try {
         const { rows } = await client.query(
           `INSERT INTO products (user_id, category_id, sku, stock, data)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT ON CONSTRAINT uq_product_sku
            DO UPDATE SET
-             stock       = EXCLUDED.stock,
-             data        = EXCLUDED.data,
+             ${stockUpdate}
+             data        = products.data || EXCLUDED.data,
              category_id = EXCLUDED.category_id
            RETURNING id, user_id, category_id, sku, stock, data, created_at`,
           [userId, id, sku, stock, data],
         );
 
         insertedRows.push(rows[0]);
-        rowsOk++;
+        rowsOk += rowCount;
       } catch (rowErr) {
-        rowsFailed++;
-        errors.push({ row: i + 2, error: rowErr.message }); // +2 = fila real en el CSV
+        rowsFailed += rowCount;
+        errors.push({ row, error: rowErr.message });
       }
     }
 
