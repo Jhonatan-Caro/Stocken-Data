@@ -18,10 +18,12 @@ export const getSalesCSVColumns = async (file) => {
 };
 
 // Paso 2: importar ventas con mapping
-export const uploadSalesCSV = async (file, mapping) => {
+// sheet: hoja del Excel a importar (opcional; el backend usa la primera)
+export const uploadSalesCSV = async (file, mapping, sheet) => {
   const formData = new FormData();
   formData.append("archivo", file);
   formData.append("mapping", JSON.stringify(mapping));
+  if (sheet) formData.append("sheet", sheet);
   const { data } = await httpClient.post("/ventas/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });

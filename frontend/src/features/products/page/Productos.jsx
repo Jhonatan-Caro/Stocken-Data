@@ -14,7 +14,7 @@ import CSVUploadModal from "../components/CSVUploadModal";
 
 const PRODUCT_FIELDS = [
   { key: "sku", label: "SKU / code", required: true },
-  { key: "stock", label: "Stock", required: true },
+  { key: "stock", label: "Stock", required: false },
   { key: "name", label: "Name", required: false },
 ];
 
@@ -78,9 +78,10 @@ export default function Productos() {
 
   const handleGetColumns = (file) => obtenerColumnasCSV(file);
 
-  const handleUploadCSV = async (file, categoryId, mapping) => {
-    await subirCSV(file, categoryId, mapping);
-    setMessage("CSV processed successfully.");
+  const handleUploadCSV = async (file, categoryId, mapping, sheet) => {
+    const resp = await subirCSV(file, categoryId, mapping, sheet);
+    setMessage("Archivo procesado correctamente.");
+    return resp;
   };
 
   return (

@@ -30,8 +30,8 @@ export default function useVentas() {
   }, []);
 
   const subirCSV = useCallback(
-    async (file, mapping) => {
-      const resp = await uploadSalesCSV(file, mapping);
+    async (file, mapping, sheet) => {
+      const resp = await uploadSalesCSV(file, mapping, sheet);
       await cargarVentas();
       return resp;
     },

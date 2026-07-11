@@ -71,15 +71,15 @@ export default function useProductos() {
     [cargarProductos],
   );
 
-  // Paso 1: leer columnas del CSV
+  // Paso 1: leer columnas del archivo (CSV o XLSX)
   const obtenerColumnasCSV = useCallback(async (file) => {
     return await getCSVColumns(file);
   }, []);
 
-  // Paso 2: importar con mapping
+  // Paso 2: importar con mapping (+ hoja opcional del Excel)
   const subirCSV = useCallback(
-    async (file, categoryId, mapping) => {
-      const resp = await uploadProductsCSV(file, categoryId, mapping);
+    async (file, categoryId, mapping, sheet) => {
+      const resp = await uploadProductsCSV(file, categoryId, mapping, sheet);
       await cargarProductos();
       return resp;
     },

@@ -22,6 +22,8 @@ export default function CSVUploadModal({
   const [categoryId, setCategoryId] = useState("");
   const [columns, setColumns] = useState([]);
   const [preview, setPreview] = useState([]);
+  const [sheets, setSheets] = useState([]);
+  const [selectedSheet, setSelectedSheet] = useState("");
   const [mapping, setMapping] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -37,6 +39,8 @@ export default function CSVUploadModal({
     setCategoryId("");
     setColumns([]);
     setPreview([]);
+    setSheets([]);
+    setSelectedSheet("");
     setMapping({});
     setError(null);
     setResult(null);
@@ -47,30 +51,47 @@ export default function CSVUploadModal({
     onClose();
   }
 
-  // Paso 0 → 1: subir CSV y obtener columnas
+  // Pre-mapear automáticamente si el nombre coincide exactamente
+  function autoMapColumns(cols) {
+    const autoMap = {};
+    requiredFields.forEach(({ key }) => {
+      if (cols.includes(key)) autoMap[key] = key;
+    });
+    return autoMap;
+  }
+
+  // Paso 0 → 1: subir archivo y obtener columnas (y hojas si es Excel)
   async function handleLoadColumns(e) {
     e.preventDefault();
     setError(null);
-    if (!file) return setError("Selecciona un archivo CSV.");
+    if (!file) return setError("Selecciona un archivo CSV o Excel.");
     if (needsCategory && !categoryId)
       return setError("Selecciona una categoría.");
     setBusy(true);
     try {
-      const { columns: cols, preview: prev } = await onGetColumns(file);
-      setColumns(cols);
-      setPreview(prev);
-      // Pre-mapear automáticamente si el nombre coincide exactamente
-      const autoMap = {};
-      requiredFields.forEach(({ key }) => {
-        if (cols.includes(key)) autoMap[key] = key;
-      });
-      setMapping(autoMap);
+      const data = await onGetColumns(file);
+      setColumns(data.columns);
+      setPreview(data.preview);
+      setSheets(data.sheets || []);
+      setSelectedSheet(data.defaultSheet || "");
+      setMapping(autoMapColumns(data.columns));
       setStep(1);
     } catch (err) {
-      setError(err?.response?.data?.message || "Error al leer el CSV.");
+      setError(err?.response?.data?.message || "Error al leer el archivo.");
     } finally {
       setBusy(false);
     }
+  }
+
+  // Cambiar de hoja: columnas y preview vienen de la respuesta ya cargada,
+  // sin nueva llamada al backend; el mapping se recalcula para la hoja nueva
+  function handleSheetChange(name) {
+    const sheet = sheets.find((s) => s.name === name);
+    if (!sheet) return;
+    setSelectedSheet(name);
+    setColumns(sheet.columns);
+    setPreview(sheet.preview);
+    setMapping(autoMapColumns(sheet.columns));
   }
 
   // Paso 1 → 2: importar con mapping confirmado
@@ -86,8 +107,8 @@ export default function CSVUploadModal({
     setBusy(true);
     try {
       const res = needsCategory
-        ? await onUpload(file, categoryId, mapping)
-        : await onUpload(file, mapping);
+        ? await onUpload(file, categoryId, mapping, selectedSheet)
+        : await onUpload(file, mapping, selectedSheet);
       setResult(res);
       setStep(2);
     } catch (err) {
@@ -109,7 +130,7 @@ export default function CSVUploadModal({
           <div>
             <h3 className="text-base font-semibold text-gray-800">
               {needsCategory ? "Importar productos" : "Importar ventas"} desde
-              CSV
+              archivo
             </h3>
             <div className="flex items-center gap-1.5 mt-1.5">
               {["Archivo", "Mapear columnas", "Resultado"].map((label, i) => (
@@ -165,12 +186,14 @@ export default function CSVUploadModal({
               </label>
             )}
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-gray-700">Archivo CSV</span>
+              <span className="text-sm text-gray-700">
+                Archivo CSV o Excel (.xlsx)
+              </span>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 flex items-center gap-3 bg-gray-50">
                 <FiUpload className="text-gray-400" size={18} />
                 <input
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                   className="text-sm flex-1"
                 />
@@ -212,15 +235,33 @@ export default function CSVUploadModal({
         {step === 1 && (
           <form onSubmit={handleImport} className="flex flex-col gap-4">
             <p className="text-xs text-gray-500">
-              Indica qué columna de tu CSV corresponde a cada campo.
+              Indica qué columna de tu archivo corresponde a cada campo.
             </p>
+
+            {/* Selector de hoja: solo para Excel con varias hojas */}
+            {sheets.length > 1 && (
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm text-gray-700">Hoja del Excel</span>
+                <select
+                  value={selectedSheet}
+                  onChange={(e) => handleSheetChange(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:bg-white outline-none"
+                >
+                  {sheets.map((s) => (
+                    <option key={s.name} value={s.name}>
+                      {s.name} ({s.rowCount} filas)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             {/* Tabla de mapeo */}
             <div className="border border-gray-100 rounded-xl overflow-hidden">
               <div className="grid grid-cols-3 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
                 <span>Campo</span>
                 <span className="text-center">→</span>
-                <span>Columna en tu CSV</span>
+                <span>Columna en tu archivo</span>
               </div>
               {requiredFields.map(({ key, label, required }) => (
                 <div

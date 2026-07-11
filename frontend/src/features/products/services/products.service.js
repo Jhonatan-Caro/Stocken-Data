@@ -21,7 +21,8 @@ export const deleteProduct = async (id) => {
   return data;
 };
 
-// Paso 1: sube el CSV y devuelve columnas + preview para el mapper
+// Paso 1: sube el archivo (CSV o XLSX) y devuelve columnas + preview
+// (y hojas disponibles) para el mapper
 export const getCSVColumns = async (file) => {
   const formData = new FormData();
   formData.append("archivo", file);
@@ -32,11 +33,13 @@ export const getCSVColumns = async (file) => {
 };
 
 // Paso 2: importa con el mapping confirmado por el usuario
-export const uploadProductsCSV = async (file, categoryId, mapping) => {
+// sheet: hoja del Excel a importar (opcional; el backend usa la primera)
+export const uploadProductsCSV = async (file, categoryId, mapping, sheet) => {
   const formData = new FormData();
   formData.append("archivo", file);
   formData.append("categoriaId", categoryId);
   formData.append("mapping", JSON.stringify(mapping));
+  if (sheet) formData.append("sheet", sheet);
   const { data } = await httpClient.post("/productos/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
