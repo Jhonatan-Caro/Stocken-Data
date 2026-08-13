@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 4000
 
 # Comando para correr el servidor
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
