@@ -7,15 +7,17 @@
 */
 @import 'tailwindcss';
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    /* -- font: Wix Madefor Display -- */
-    font-family: "Sora", sans-serif;
-    font-optical-sizing: auto;
-    font-weight: 400;
-    font-style: normal;
+@layer base {
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        /* -- font: Wix Madefor Display -- */
+        font-family: "Sora", sans-serif;
+        font-optical-sizing: auto;
+        font-weight: 400;
+        font-style: normal;
+    }
 }
 
 :root{
