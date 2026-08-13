@@ -14,15 +14,24 @@ from toolsFinancieros import top_productos_vendidos, productos_menos_vendidos, f
 from toolsProducto import crear_producto, editar_producto, eliminar_producto
 from toolsFinancierosRegistros import top_registros_vendidos, registros_menos_vendidos, fechas_max_ventas_registro, resumen_ventas_por_categoria
 import os
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 #Cargar variables de entorno
 load_dotenv()
 
 # 2. Cargar la clave de openAI
 openai_key = os.getenv("OPENAI_API_KEY")
+if not openai_key:
+    raise RuntimeError(
+        "La variable de entorno OPENAI_API_KEY no está definida. "
+        "Configúrala en el archivo .env antes de iniciar el servicio."
+    )
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# 3. Conectar con la BD
+# 3. Datos de conexión a la BD (la conexión real se hace de forma perezosa)
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 host = os.getenv("DB_HOST")
@@ -30,35 +39,86 @@ port = os.getenv("DB_PORT")
 database = os.getenv("DB_NAME")
 
 uri = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
-print(f"URI: {uri.encode('utf-8')}")
-db = SQLDatabase.from_uri(uri, engine_args={"pool_pre_ping": True})
 
-# 4. Crear el modelo de lenguaje
-llm = ChatOpenAI(temperature=0,model_name='gpt-4')
+# Nº de reintentos y espera entre ellos al conectar con la BD
+DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "5"))
+DB_CONNECT_DELAY = float(os.getenv("DB_CONNECT_DELAY", "3"))
 
-# 5. Crear el toolkit para usar con agentes
-toolkit = SQLDatabaseToolkit(llm=llm, db=db)
-sql_tools = toolkit.get_tools()
+# Ejecutor del agente construido de forma perezosa (lazy) y cacheado
+_agent_executor = None
 
-tools = sql_tools + [
-    crear_producto,
-    editar_producto,
-    eliminar_producto,
-    crear_categoria,
-    editar_categoria,
-    eliminar_categoria,
-    crear_registro_dinamico,
-    editar_registro_dinamico,
-    eliminar_registro_dinamico,
-    top_productos_vendidos,
-    fechas_max_ventas_producto,
-    resumen_ventas,
-    predecir_ventas_siguiente_mes,
-    top_registros_vendidos,
-    registros_menos_vendidos,
-    fechas_max_ventas_registro, 
-    resumen_ventas_por_categoria,
-]
+
+def _connect_db():
+    """Conecta con la BD reintentando ante fallos transitorios (p. ej. la BD
+    aún no está lista o el DNS de Docker todavía no resuelve el host)."""
+    last_error = None
+    for intento in range(1, DB_CONNECT_RETRIES + 1):
+        try:
+            return SQLDatabase.from_uri(uri, engine_args={"pool_pre_ping": True})
+        except Exception as e:  # noqa: BLE001
+            last_error = e
+            logger.warning(
+                "No se pudo conectar con la BD (intento %s/%s): %s",
+                intento, DB_CONNECT_RETRIES, e,
+            )
+            if intento < DB_CONNECT_RETRIES:
+                time.sleep(DB_CONNECT_DELAY)
+    raise RuntimeError(
+        f"No se pudo conectar con la base de datos tras {DB_CONNECT_RETRIES} intentos"
+    ) from last_error
+
+
+def _build_agent_executor():
+    """Construye (una sola vez) el agente y su ejecutor."""
+    db = _connect_db()
+
+    # 4. Crear el modelo de lenguaje
+    llm = ChatOpenAI(temperature=0, model_name='gpt-4')
+
+    # 5. Crear el toolkit para usar con agentes
+    toolkit = SQLDatabaseToolkit(llm=llm, db=db)
+    sql_tools = toolkit.get_tools()
+
+    tools = sql_tools + [
+        crear_producto,
+        editar_producto,
+        eliminar_producto,
+        crear_categoria,
+        editar_categoria,
+        eliminar_categoria,
+        crear_registro_dinamico,
+        editar_registro_dinamico,
+        eliminar_registro_dinamico,
+        top_productos_vendidos,
+        fechas_max_ventas_producto,
+        resumen_ventas,
+        predecir_ventas_siguiente_mes,
+        top_registros_vendidos,
+        registros_menos_vendidos,
+        fechas_max_ventas_registro,
+        resumen_ventas_por_categoria,
+    ]
+
+    agent = create_openai_functions_agent(
+        llm=llm,
+        tools=tools,
+        prompt=prompt,
+    )
+
+    return AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        handle_parsing_errors=True,
+    )
+
+
+def _get_agent_executor():
+    """Devuelve el ejecutor del agente, construyéndolo la primera vez."""
+    global _agent_executor
+    if _agent_executor is None:
+        _agent_executor = _build_agent_executor()
+    return _agent_executor
 
 system_template = """
     Eres un asistente experto en gestión de base de datos para productos y categorías.
@@ -184,23 +244,9 @@ prompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder(variable_name="agent_scratchpad"),
 ])
 
-# Crear el agente manualmente con soporte para funciones de OpenAI
-agent = create_openai_functions_agent(
-    llm=llm,
-    tools=tools,
-    prompt=prompt,
-)
-
-# Crear el ejecutor de agente
-agent_executor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    handle_parsing_errors=True
-)
-
 def consultar_db(pregunta: str, usuario_id: int) -> str:
     try:
+        agent_executor = _get_agent_executor()
         resultado = agent_executor.invoke({
             "question": pregunta, # lo pones claramente
             "usuario_id": usuario_id,
