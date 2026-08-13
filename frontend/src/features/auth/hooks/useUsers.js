@@ -1,5 +1,5 @@
 import { useState } from "react";
-import httpClient from "../../../services/httpCliente";
+import httpClient from "../../../services/httpClient";
 
 export default function useUsers() {
     const [user, setUser] = useState(null);

@@ -4,16 +4,18 @@ import {
   FiBox,
   FiGrid,
   FiTrendingUp,
+  FiBarChart2,
   FiSettings,
   FiLogOut,
 } from "react-icons/fi";
 
 const links = [
   { ruta: "/dashboard", texto: "Dashboard", icono: FiHome },
-  { ruta: "/productos", texto: "Products", icono: FiBox },
-  { ruta: "/cargar-datos", texto: "Categories", icono: FiGrid },
-  { ruta: "/ventas", texto: "Sales", icono: FiTrendingUp },
-  { ruta: "/configuracion", texto: "Settings", icono: FiSettings },
+  { ruta: "/products", texto: "Products", icono: FiBox },
+  { ruta: "/categories", texto: "Categories", icono: FiGrid },
+  { ruta: "/sales", texto: "Sales", icono: FiTrendingUp },
+  { ruta: "/sales/statistics", texto: "Statistics", icono: FiBarChart2 },
+  { ruta: "/settings", texto: "Settings", icono: FiSettings },
 ];
 
 export default function Sidebar({ open = false, onClose }) {

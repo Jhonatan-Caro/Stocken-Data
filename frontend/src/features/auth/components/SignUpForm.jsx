@@ -58,8 +58,6 @@ export default function SignUpForm() {
         onChange={handleChange}
         error={errors.confirmPassword}
       />
-
-      {/* Aceptar términos */}
       <div className="flex items-center">
         <input
           type="checkbox"
@@ -75,8 +73,6 @@ export default function SignUpForm() {
           </a>
         </label>
       </div>
-
-      {/* Botón de registro */}
       <button
         type="submit"
         disabled={
@@ -92,8 +88,6 @@ export default function SignUpForm() {
       >
         Registrarse
       </button>
-
-      {/* Mensaje de error o éxito */}
       <div>
         {message && (
           <p
@@ -105,8 +99,6 @@ export default function SignUpForm() {
           </p>
         )}
       </div>
-
-      {/* Enlace a login */}
       <p className="text-center text-gray-500">
         ¿Ya tienes una cuenta?&nbsp;&nbsp;
         <Link to="/Login" className="text-custom-azul hover:underline">

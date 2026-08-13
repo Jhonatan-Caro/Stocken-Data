@@ -1,25 +1,22 @@
 import validation from "../../../assets/validacion/validation.jpg"
-import LoginForm from "../componentes/LoginForm"
+import LoginForm from "../components/LoginForm"
 
 export default function LoginPage(){
     return (
         <main className="min-h-screen flex flex-col lg:flex-row">
-            {/* Lado izquierdo con imagen de fondo */}
             <div className="relative overflow-hidden w-full lg:w-1/2 h-64 lg:h-auto">
-                {/* Imagen de fondo desenfocada */}
                 <div
                 className="absolute inset-0 bg-cover bg-center filter blur-sm scale-105"
                 style={{ backgroundImage: `url(${validation})` }}
                 />
 
-                {/* Contenido superpuesto */}
                 <div className="relative z-10 flex flex-col justify-center items-center text-white px-6 py-10 lg:p-10 h-full text-center">
                 <h1 className="text-3xl lg:text-4xl font-bold mb-4 text-custom-blanco">
-                    Inicia sesión en tu cuenta
+                    Stocken Data
                 </h1>
+                <img></img>
                 <p className="text-gray-200">
-                    Explora las funciones principales de nuestra plataforma&nbsp;&nbsp;
-                    <span className="font-bold">⭢</span>
+                    Explora las funciones principales de la plataforma y descubre cómo puede ayudarte a optimizar la gestión de tu negocio.
                 </p>
                 </div>
             </div>

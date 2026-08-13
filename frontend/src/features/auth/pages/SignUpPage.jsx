@@ -1,10 +1,9 @@
 import validation from "../../../assets/validacion/validation.jpg";
-import SignUpForm from "../componentes/SignUpForm";
+import SignUpForm from "../components/SignUpForm";
 
 export default function SignUpPage() {
   return (
     <main className="min-h-screen flex flex-col lg:flex-row">
-      {/* Lado izquierdo con imagen de fondo */}
       <div className="relative overflow-hidden w-full lg:w-1/2 h-64 lg:h-auto">
         <div
           className="absolute inset-0 bg-cover bg-center filter blur-sm scale-105"
@@ -21,7 +20,6 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* Lado derecho con el formulario */}
       <div className="pt-20 w-full lg:w-1/2 flex items-center justify-center px-10 lg:px-0 lg:bg-custom-blanco lg:pt-0">
         <SignUpForm />
       </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link, useLocation } from "react-router-dom";
-import httpClient from "../../../services/httpCliente";
+import httpClient from "../../../services/httpClient";
 
 import "../../../styles/menu.css";
 
@@ -36,10 +36,10 @@ export default function Menu() {
   const cerrarMenu = () => setMenuAbierto(false);
 
   const links = [
-    { ruta: "/inicio", texto: "Inicio" },
-    { ruta: "/planes", texto: "Planes" },
-    { ruta: "/sobre-nosotros", texto: "Sobre Nosotros" },
-    { ruta: "/soporte", texto: "Soporte" },
+    { ruta: "/home", texto: "Inicio" },
+    { ruta: "/plans", texto: "Planes" },
+    { ruta: "/about", texto: "Sobre Nosotros" },
+    { ruta: "/support", texto: "Soporte" },
   ];
 
   return (

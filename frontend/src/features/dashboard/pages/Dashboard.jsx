@@ -3,13 +3,12 @@ import { FiDollarSign, FiBox, FiGrid, FiAlertTriangle } from "react-icons/fi";
 
 import DashboardLayout from "../../../shared/layout/DashboardLayout";
 import useUsers from "../../auth/hooks/useUsers";
-import useProductos from "../../products/hooks/useProductos";
-import useProductSearch from "../../products/hooks/useProductSearch";
-import useCategorias from "../../categorys/hooks/useCategorias";
-import { getPrecio, getStock } from "../../products/utils/productData";
+import useProducts from "../../products/hooks/useProducts";
+import useCategories from "../../categories/hooks/useCategories";
+import useSalesStats from "../../sale/hooks/useSalesStats";
+import { getStock } from "../../products/utils/productData";
 
 import StatCard from "../components/StatCard";
-import RecentProductsTable from "../components/RecentProductsTable";
 import DynamicCategories from "../components/DynamicCategories";
 import ProductsTable from "../../products/components/ProductsTable";
 
@@ -21,75 +20,69 @@ function formatDate(date) {
   });
 }
 
-function buildCategoryStats(productos, categorias) {
-  if (!categorias?.length) return [];
-  const total = productos.length || 1;
-  return categorias
+function buildCategoryStats(products, categories) {
+  if (!categories?.length) return [];
+  const total = products.length || 1;
+  return categories
     .map((c) => {
-      const items = productos.filter((p) => p.category_id === c.id).length;
+      const items = products.filter((p) => p.category_id === c.id).length;
       return {
         id: c.id,
-        nombre: c.name,
+        name: c.name,
         items,
-        progreso: Math.round((items / total) * 100),
+        progress: Math.round((items / total) * 100),
       };
     })
-    .sort((a, b) => b.items - a.items)
-    .slice(0, 3);
+    .sort((a, b) => b.items - a.items);
 }
 
 export default function Dashboard() {
   const { user, fetchUser } = useUsers();
-  const { productos, cargarProductos, error: errorProductos } = useProductos();
-  const { categorias, cargarCategorias } = useCategorias();
-  const [errorCarga, setErrorCarga] = useState(null);
-  const { query, setQuery, searchedProducts } = useProductSearch(productos);
+  const { products, loadProducts, error: productsError } = useProducts();
+  const { categories, loadCategories } = useCategories();
+  const { summary } = useSalesStats();
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     fetchUser();
-    Promise.all([cargarProductos(), cargarCategorias()]).catch((err) => {
+    Promise.all([loadProducts(), loadCategories()]).catch((err) => {
       console.error("Error al cargar datos del dashboard:", err);
-      setErrorCarga("No fue posible cargar los datos del dashboard.");
+      setLoadError("No fue posible cargar los datos del dashboard.");
     });
-  }, [cargarProductos, cargarCategorias]);
+  }, [loadProducts, loadCategories]);
 
   const stats = useMemo(() => {
-    const totalProductos = productos.length;
+    const totalProducts = products.length;
     let lowStock = 0;
-    let totalSales = 0;
 
-    productos.forEach((p) => {
+    products.forEach((p) => {
       const stock = getStock(p);
-      const precio = getPrecio(p);
       if (Number.isFinite(stock) && stock > 0 && stock < 20) lowStock += 1;
-      if (Number.isFinite(precio) && Number.isFinite(stock)) {
-        totalSales += precio * stock;
-      }
     });
 
     return {
-      totalProductos,
+      totalProducts,
       lowStock,
-      totalSales,
-      categorias: buildCategoryStats(productos, categorias),
-      totalCategorias: categorias.length,
+      totalSales: Number(summary?.revenue) || 0,
+      categories: buildCategoryStats(products, categories),
+      totalCategories: categories.length,
     };
-  }, [productos, categorias]);
+  }, [products, categories, summary]);
 
-  const fechaHoy = formatDate(new Date());
-  const nombreUsuario = (user?.name || "Alex").split(" ")[0];
+  const todayDate = formatDate(new Date());
+  const userName = (user?.name || "Alex").split(" ")[0];
 
-  const mensajeError = errorCarga || errorProductos;
+  const errorMessage = loadError || productsError;
 
   return (
-    <DashboardLayout onSearch={setQuery}>
+    <DashboardLayout>
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="flex flex-col gap-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Welcome back, {nombreUsuario}!
+              Welcome back, {userName}!
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Date {fechaHoy}</p>
+            <p className="text-sm text-gray-500 mt-1">Date {todayDate}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -100,7 +93,6 @@ export default function Dashboard() {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}`}
-              delta="+12%"
               deltaTone="positive"
               chart="line"
               color="#03a696"
@@ -108,8 +100,7 @@ export default function Dashboard() {
             <StatCard
               icon={FiBox}
               label="Total Products"
-              value={stats.totalProductos.toLocaleString("en-US")}
-              delta="+5%"
+              value={stats.totalProducts.toLocaleString("en-US")}
               deltaTone="positive"
               chart="bars"
               color="#0b3041"
@@ -117,7 +108,7 @@ export default function Dashboard() {
             <StatCard
               icon={FiGrid}
               label="Categories"
-              value={stats.totalCategorias}
+              value={stats.totalCategories}
               hint="active"
               chart="line"
               color="#3b82f6"
@@ -126,23 +117,24 @@ export default function Dashboard() {
               icon={FiAlertTriangle}
               label="Low Stock Warnings"
               value={stats.lowStock}
-              delta="-3%"
               deltaTone="negative"
               chart="bars"
               color="#ef4444"
             />
           </div>
 
-          {mensajeError && (
+          {errorMessage && (
             <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
-              {mensajeError}
+              {errorMessage}
             </div>
           )}
-
-          <ProductsTable productos={searchedProducts} />
+          <div className="grid grid-cols-1 gap-6 items-start">
+          <ProductsTable products={products} />
+          </div>
         </div>
-
-        <DynamicCategories categorias={stats.categorias} />
+        <div className="lg:col-span-1">
+          <DynamicCategories categories={stats.categories} />
+        </div>
       </div>
     </DashboardLayout>
   );

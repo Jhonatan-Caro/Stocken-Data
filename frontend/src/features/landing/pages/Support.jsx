@@ -2,7 +2,7 @@ import Menu from "../components/Menu";
 import Footer from "../components/Footer";
 import { FiUser, FiMail, FiEdit3 } from "react-icons/fi";
 
-export default function Soporte() {
+export default function Support() {
   return (
     <div className="bg-gray-50">
       <div className="fixed top-0 left-0 w-full z-50">

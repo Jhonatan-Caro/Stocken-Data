@@ -1,4 +1,4 @@
-import httpClient from "../../../services/httpCliente";
+import httpClient from "../../../services/httpClient";
 
 export async function questionChatBot(pregunta) {
   try {

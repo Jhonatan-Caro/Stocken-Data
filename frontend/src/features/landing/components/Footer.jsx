@@ -4,10 +4,10 @@ import github from "../../../assets/menu/github.png";
 import facebook from "../../../assets/menu/facebook.png";
 
 const links = [
-  { ruta: "/inicio", texto: "Inicio" },
-  { ruta: "/planes", texto: "Planes" },
-  { ruta: "/sobre-nosotros", texto: "Sobre Nosotros" },
-  { ruta: "/soporte", texto: "Soporte" },
+  { ruta: "/home", texto: "Inicio" },
+  { ruta: "/plans", texto: "Planes" },
+  { ruta: "/about", texto: "Sobre Nosotros" },
+  { ruta: "/support", texto: "Soporte" },
 ];
 
 export default function Footer() {

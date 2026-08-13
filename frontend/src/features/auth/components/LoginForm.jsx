@@ -19,7 +19,6 @@ export default function LoginForm(){
     return (
         <form onSubmit={handleSubmit} className="text-sm w-full max-w-md space-y-6">
             <h2 className="text-2xl font-semibold text-custom-azul">Inicio de Sesión</h2>
-                {/* Email */}
                 <div>
                     <div className="mt-1 flex items-center border border-gray-300 rounded-md shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 px-3">
                     <MdEmail className="text-gray-500 mr-2" />
@@ -34,8 +33,6 @@ export default function LoginForm(){
                     />
                     </div>
                 </div>
-
-                {/* Contraseña */}
                 <div>
                     <div className="mt-1 flex items-center border border-gray-300 rounded-md shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 px-3">
                     <RiLockPasswordLine className="text-gray-500 mr-2" />
@@ -49,16 +46,12 @@ export default function LoginForm(){
                         required
                     />
                     </div>
-                </div>
-                    
-                {/* Botón de inicio */}
+                </div>                    
                 <button
                     type="submit"
                     className="w-full bg-custom-verde hover:bg-custom-azul text-custom-blanco py-2 rounded-md transition">
                     Iniciar sesión
                 </button>
-                    
-                {/* Mensaje de error o éxito */}
                 <div>
                     {message && (
                         <p className="text-center text-red-500 mt-4">
@@ -66,9 +59,7 @@ export default function LoginForm(){
                         </p>
                     )}
                 </div>
-                    
-                {/* Enlace a registro */}
-                <p className="text-center text-gray-500">¿No tienes una cuenta?&nbsp;&nbsp;
+                                    <p className="text-center text-gray-500">¿No tienes una cuenta?&nbsp;&nbsp;
                     <Link to="/Register" className="text-custom-azul hover:underline">
                         Regístrate
                     </Link>

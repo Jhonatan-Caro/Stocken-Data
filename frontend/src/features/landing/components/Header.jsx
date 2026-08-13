@@ -22,12 +22,12 @@ export default function DashboardMenu() {
   const links = [
     { ruta: "/dashboard", texto: "Inicio", icono: <FiDatabase size={18} /> },
     {
-      ruta: "/cargar-datos",
+      ruta: "/upload-data",
       texto: "Categorías",
       icono: <FiTablet size={18} />,
     },
-    { ruta: "/ventas", texto: "Ventas", icono: <FiShoppingBag size={18} /> },
-    { ruta: "/inicio", texto: "Home", icono: <FiHome size={18} /> },
+    { ruta: "/sales", texto: "Ventas", icono: <FiShoppingBag size={18} /> },
+    { ruta: "/home", texto: "Home", icono: <FiHome size={18} /> },
   ];
 
   return (

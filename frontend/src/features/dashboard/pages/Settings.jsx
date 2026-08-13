@@ -2,7 +2,7 @@ import DashboardLayout from "../../../shared/layout/DashboardLayout";
 import useUsers from "../../auth/hooks/useUsers";
 import { useEffect } from "react";
 
-export default function Configuracion() {
+export default function Settings() {
   const { user, fetchUser } = useUsers();
 
   useEffect(() => {

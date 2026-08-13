@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { validateField } from "../utils/validation";
-//import { register } from "../../../api/authApi";
-
 import { register } from "../services/auth.service";
 
 export function useSignUp() {

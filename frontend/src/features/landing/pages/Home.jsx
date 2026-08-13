@@ -13,7 +13,7 @@ import {
 
 import inicio from "../../../assets/inicio/inicio.png";
 
-export default function Inicio() {
+export default function Home() {
   return (
     <div className="bg-gray-50">
       <div className="fixed top-0 left-0 w-full z-50 ">
@@ -40,7 +40,7 @@ export default function Inicio() {
             </p>
 
             <Link
-              to="/sobre-nosotros"
+              to="/about"
               className="text-xs block text-center w-full bg-custom-verde text-white font-bold py-2 rounded-lg hover:bg-custom-azul transition duration-200"
             >
               Más Información&nbsp;&nbsp;<span className="font-bold">⭢</span>

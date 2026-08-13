@@ -1,4 +1,4 @@
-import httpClient from "../../../services/httpCliente.js";
+import httpClient from "../../../services/httpClient.js";
 
 export const login = async (credentials) => {
   const { data } = await httpClient.post("/login", credentials);

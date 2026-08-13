@@ -1,7 +1,7 @@
 import Menu from "../components/Menu";
 import Footer from "../components/Footer";
 
-export default function Planes() {
+export default function Plans() {
   return (
     <div className="bg-gray-80">
       <div className="fixed top-0 left-0 w-full z-50">

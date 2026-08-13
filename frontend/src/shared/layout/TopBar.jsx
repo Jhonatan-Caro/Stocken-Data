@@ -6,10 +6,8 @@ export default function TopBar({ user, onSearch, onToggleSidebar }) {
 
   const handleChange = (e) => {
     const value = e.target.value;
-    console.log("TopBar:", value);
-
     setQuery(value);
-    if (onSearch) onSearch(value);
+    onSearch(value);
   };
 
   const initials = (user?.name || "U")
@@ -20,7 +18,7 @@ export default function TopBar({ user, onSearch, onToggleSidebar }) {
     .toUpperCase();
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
+    <div className="bg-[#0b3041] shadow-sm px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 sm:gap-4">
       <button
         type="button"
         onClick={onToggleSidebar}
@@ -30,19 +28,23 @@ export default function TopBar({ user, onSearch, onToggleSidebar }) {
         <FiMenu size={20} />
       </button>
 
-      <div className="flex-1 relative">
-        <FiSearch
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <input
-          type="text"
-          value={query}
-          onChange={handleChange}
-          placeholder="Search inventory, products..."
-          className="w-full bg-gray-50 border border-transparent focus:border-gray-200 focus:bg-white pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none transition"
-        />
-      </div>
+      {onSearch ? (
+        <div className="flex-1 relative">
+          <FiSearch
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={handleChange}
+            placeholder="Search inventory, products..."
+            className="w-full bg-gray-50 border border-transparent focus:border-gray-200 focus:bg-white pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none transition"
+          />
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       <button
         type="button"
@@ -58,7 +60,7 @@ export default function TopBar({ user, onSearch, onToggleSidebar }) {
           {initials}
         </div>
         <div className="hidden sm:flex flex-col leading-tight">
-          <span className="text-sm font-semibold text-gray-800">
+          <span className="text-sm font-semibold text-white">
             {user?.name || "Invitado"}
           </span>
           <span className="text-xs text-gray-400">{user?.role || "Role"}</span>

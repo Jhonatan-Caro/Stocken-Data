@@ -3,7 +3,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import useUsers from "../../features/auth/hooks/useUsers";
 import useAuthUser from "../../features/auth/hooks/useAuthUser";
-import ChatBotWrapper from "../../features/chatbot/components/ChatBotWrapper";
+//import ChatBotWrapper from "../../features/chatbot/components/ChatBotWrapper";
 
 export default function DashboardLayout({ children, onSearch }) {
   useAuthUser();
@@ -22,7 +22,7 @@ export default function DashboardLayout({ children, onSearch }) {
       />
 
       <div className="md:pl-64 min-h-screen flex flex-col">
-        <header className="px-4 sm:px-6 lg:px-8 pt-6">
+        <header>
           <TopBar
             user={user}
             onSearch={onSearch}
@@ -35,7 +35,6 @@ export default function DashboardLayout({ children, onSearch }) {
         </main>
       </div>
 
-      <ChatBotWrapper />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   FaMobileAlt,
 } from "react-icons/fa";
 
-export default function SobreNosotros() {
+export default function AboutUs() {
   return (
     <div className="bg-gray-50">
       <div className="fixed top-0 left-0 w-full z-50">
