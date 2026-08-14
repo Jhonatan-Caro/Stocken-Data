@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 
-// Busca en todas las propiedades relevantes de una categoría
 function matchesQuery(category, query) {
   if (!query.trim()) return true;
   const q = query.toLowerCase();
 
-  // Busca en columnas fijas
   if (category.name?.toLowerCase().includes(q)) return true;
   if (category.description?.toLowerCase().includes(q)) return true;
 

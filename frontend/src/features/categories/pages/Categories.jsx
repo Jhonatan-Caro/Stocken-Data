@@ -1,35 +1,36 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import DashboardLayout from "../../../shared/layout/DashboardLayout";
-import useCategorias from "../hooks/useCategorias";
+import useCategories from "../hooks/useCategories";
 import useCategoryFilter from "../hooks/useCategoryFilter";
 
-export default function PaginaCargaCSV() {
-  const { categorias, cargarCategorias, agregarCategoria, eliminarCategoria } =
-    useCategorias();
-  const { query, setQuery, filteredCategories } = useCategoryFilter(categorias);
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [mensaje, setMensaje] = useState(null);
+export default function Categories() {
+  const { categories, loadCategories, addCategory, removeCategory } =
+    useCategories();
+  const { query, setQuery, filteredCategories } = useCategoryFilter(categories);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    cargarCategorias();
-  }, [cargarCategorias]);
+    loadCategories();
+  }, [loadCategories]);
 
-  const handleCrear = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    setMensaje(null);
+    setMessage(null);
     setError(null);
-    if (!nombre.trim()) {
+    if (!name.trim()) {
       setError("El nombre es obligatorio.");
       return;
     }
     try {
-      await agregarCategoria({ nombre, descripcion });
-      setMensaje("Categoría creada");
-      setNombre("");
-      setDescripcion("");
+      await addCategory({ name, description });
+      setMessage("Categoría creada");
+      setName("");
+      setDescription("");
     } catch (err) {
       setError(
         err?.response?.data?.message || "No fue posible crear la categoría",
@@ -37,14 +38,14 @@ export default function PaginaCargaCSV() {
     }
   };
 
-  const handleEliminar = async (id) => {
+  const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta categoría y todos sus productos asociados?"))
       return;
-    setMensaje(null);
+    setMessage(null);
     setError(null);
     try {
-      await eliminarCategoria(id);
-      setMensaje("Categoría eliminada");
+      await removeCategory(id);
+      setMessage("Categoría eliminada");
     } catch (err) {
       setError(err?.response?.data?.message || "No fue posible eliminar");
     }
@@ -52,12 +53,12 @@ export default function PaginaCargaCSV() {
 
   return (
     <DashboardLayout onSearch={setQuery}>
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col gap-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
           Categories
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Crea y administra las categorías de tus productos.
+          Crea y administra las categorías de tus productos. Si eliminas una categoría, todos los productos asociados a ella también serán eliminados.
         </p>
       </div>
 
@@ -80,7 +81,7 @@ export default function PaginaCargaCSV() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {categorias.length === 0 && (
+                {categories.length === 0 && (
                   <tr>
                     <td
                       colSpan={4}
@@ -106,7 +107,7 @@ export default function PaginaCargaCSV() {
                     <td className="px-4 py-3 text-right">
                       <button
                         type="button"
-                        onClick={() => handleEliminar(c.id)}
+                        onClick={() => handleDelete(c.id)}
                         className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
                       >
                         <FiTrash2 size={14} /> Eliminar
@@ -124,13 +125,13 @@ export default function PaginaCargaCSV() {
             Nueva categoría
           </h2>
 
-          <form onSubmit={handleCrear} className="flex flex-col gap-4">
+          <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm text-gray-700">Nombre</span>
               <input
                 type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Ej. Electronics"
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-gray-300 outline-none"
               />
@@ -139,14 +140,14 @@ export default function PaginaCargaCSV() {
               <span className="text-sm text-gray-700">Descripción</span>
               <input
                 type="text"
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Opcional"
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-gray-300 outline-none"
               />
             </label>
 
-            {(mensaje || error) && (
+            {(message || error) && (
               <div
                 className={`text-sm rounded-lg px-3 py-2 ${
                   error
@@ -154,7 +155,7 @@ export default function PaginaCargaCSV() {
                     : "bg-emerald-50 border border-emerald-100 text-emerald-700"
                 }`}
               >
-                {error || mensaje}
+                {error || message}
               </div>
             )}
 
