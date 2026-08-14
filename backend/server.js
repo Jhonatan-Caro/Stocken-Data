@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes.js";
 import productsRoutes from "./modules/products/products.routes.js";
-import categoriasRoutes from "./modules/categorys/categorias.routes.js";
-import ventasRoutes from "./modules/sales/ventas.routes.js";
+import categoriesRoutes from "./modules/categories/categories.routes.js";
+import salesRoutes from "./modules/sales/sales.routes.js";
 import chatBotRoutes from "./modules/chatbot/chatbot.routes.js";
 
 const app = express();
@@ -20,9 +20,9 @@ app.use(
 app.use(express.json());
 
 app.use("/api", authRoutes);
-app.use("/api/productos", productsRoutes);
-app.use("/api/categorias", categoriasRoutes);
-app.use("/api/ventas", ventasRoutes);
+app.use("/api/products", productsRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/sales", salesRoutes);
 app.use(chatBotRoutes);
 
 app.get("/", (req, res) => {
