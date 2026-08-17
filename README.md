@@ -3,6 +3,8 @@
 Plataforma web de gestión de inventario y análisis de ventas para pequeño comercio y e-commerce. Importa archivos CSV y XLSX de cualquier origen —cada tienda exporta con nombres de columna distintos— y los normaliza mediante un **mapeo dinámico de campos**, para poder calcular estadísticas fiables sobre datos que llegan sin estructura fija.
 
 ![Vista de estadísticas de Stocken-Data](docs/grafica-mes.png)
+![Vista de estadísticas de Stocken-Data](docs/grafica-mediana-canal.png)
+![Vista de estadísticas de Stocken-Data](docs/listado.png)
 
 ---
 
