@@ -10,3 +10,7 @@ CAMBIOS_*.md
 README_COMENTARIOS.md
 Fixes
 
+# Volcados/backups de la base de datos (no versionar)
+*.tar.gz
+*.tgz
+
