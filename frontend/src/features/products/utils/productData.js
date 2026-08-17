@@ -8,16 +8,16 @@ function pickField(data, keys) {
   return undefined;
 }
 
-export function getNombre(producto) {
+export function getName(product) {
   return (
-    pickField(producto?.data, ["nombre", "Nombre", "name", "Name", "NAME"]) ??
+    pickField(product?.data, ["nombre", "Nombre", "name", "Name", "NAME"]) ??
     "—"
   );
 }
 
-export function getModelo(producto) {
+export function getModel(product) {
   return (
-    pickField(producto?.data, [
+    pickField(product?.data, [
       "modelo",
       "Modelo",
       "model",
@@ -30,10 +30,10 @@ export function getModelo(producto) {
   );
 }
 
-export function getCategoria(producto) {
-  if (producto?.category_name) return producto.category_name;
+export function getCategory(product) {
+  if (product?.category_name) return product.category_name;
   return (
-    pickField(producto?.data, [
+    pickField(product?.data, [
       "categoria",
       "Categoria",
       "category",
@@ -42,8 +42,8 @@ export function getCategoria(producto) {
   );
 }
 
-export function getPrecio(producto) {
-  const v = pickField(producto?.data, [
+export function getPrice(product) {
+  const v = pickField(product?.data, [
     "precio",
     "Precio",
     "price",
@@ -54,20 +54,13 @@ export function getPrecio(producto) {
   return Number.isFinite(num) ? num : null;
 }
 
-export function getStock(producto) {
-  console.log(
-    "getStock recibe p.stock:",
-    producto?.stock,
-    "p.data.stock:",
-    producto?.data?.stock,
-  );
-  if (producto?.stock !== undefined && producto?.stock !== null) {
-    const num = Number(producto.stock);
-    if (Number.isFinite(num)) console.log("→ usando p.stock:", num);
+export function getStock(product) {
+  if (product?.stock !== undefined && product?.stock !== null) {
+    const num = Number(product.stock);
     return num;
   }
 
-  const v = pickField(producto?.data, [
+  const v = pickField(product?.data, [
     "stock",
     "Stock",
     "STOCK",
@@ -78,9 +71,9 @@ export function getStock(producto) {
   return Number.isFinite(num) ? num : null;
 }
 
-export function formatPrecio(precio) {
-  if (precio === null || precio === undefined) return "—";
-  return `$${Number(precio).toLocaleString("en-US", {
+export function formatPrice(price) {
+  if (price === null || price === undefined) return "—";
+  return `$${Number(price).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

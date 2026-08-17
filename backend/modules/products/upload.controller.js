@@ -24,18 +24,14 @@ export async function getCSVColumns(req, res) {
   }
 }
 
-// POST /api/productos/upload
-// Recibe el archivo + mapping confirmado por el usuario (+ hoja opcional
-// para XLSX) e importa los productos
 export async function uploadCSV(req, res) {
-  const usuarioId = req.user.id;
-  const categoriaId = req.body.categoriaId ?? req.body.category_id;
+  const userId = req.user.id;
+  const categoryId = req.body.categoryId ?? req.body.category_id;
 
   if (!req.file) {
     return res.status(400).json({ message: "No se ha subido ningún archivo" });
   }
 
-  // El mapping llega como string JSON desde multipart/form-data
   let mapping;
   try {
     mapping =
@@ -48,7 +44,6 @@ export async function uploadCSV(req, res) {
       .json({ message: "El campo mapping no es un JSON válido" });
   }
 
-  // stock es opcional: un catálogo puede no traer columna de stock (default 0)
   if (!mapping?.sku) {
     return res.status(400).json({
       message: 'El mapping debe incluir al menos "sku"',
@@ -57,11 +52,11 @@ export async function uploadCSV(req, res) {
 
   try {
     const workbook = await parseUploadedFile(req.file);
-    const filas = getSheetRows(workbook, req.body.sheet);
+    const rows = getSheetRows(workbook, req.body.sheet);
     const result = await bulkInsertProducts(
-      usuarioId,
-      categoriaId,
-      filas,
+      userId,
+      categoryId,
+      rows,
       mapping,
       req.file.originalname,
     );

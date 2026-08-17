@@ -2,29 +2,29 @@ import express from "express";
 import { verifyToken } from "../../middleware/verifyToken.js";
 import { spreadsheetUpload } from "../../shared/importers/upload.middleware.js";
 import {
-  getProductos,
-  createProducto,
-  updateProducto,
-  deleteProducto,
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
 } from "./products.controller.js";
 import { uploadCSV, getCSVColumns } from "./upload.controller.js";
 
 const router = express.Router();
 
-router.get("/", verifyToken, getProductos);
-router.post("/", verifyToken, createProducto);
-router.put("/:id", verifyToken, updateProducto);
-router.delete("/:id", verifyToken, deleteProducto);
+router.get("/", verifyToken, getProducts);
+router.post("/", verifyToken, createProduct);
+router.put("/:id", verifyToken, updateProduct);
+router.delete("/:id", verifyToken, deleteProduct);
 router.post(
   "/columns",
   verifyToken,
-  spreadsheetUpload.single("archivo"),
+  spreadsheetUpload.single("file"),
   getCSVColumns,
 );
 router.post(
   "/upload",
   verifyToken,
-  spreadsheetUpload.single("archivo"),
+  spreadsheetUpload.single("file"),
   uploadCSV,
 );
 

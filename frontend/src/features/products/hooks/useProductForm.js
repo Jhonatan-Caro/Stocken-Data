@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const NOMBRE_KEYS = new Set(["nombre", "Nombre", "name", "Name"]);
+const NAME_KEYS = new Set(["nombre", "Nombre", "name", "Name"]);
 const FIXED_KEYS = new Set([
   "sku",
   "stock",
@@ -31,7 +31,7 @@ export default function useProductForm({
 
       const incoming = initialProduct.data || {};
       const nameEntry = Object.entries(incoming).find(([k]) =>
-        NOMBRE_KEYS.has(k),
+        NAME_KEYS.has(k),
       );
       setName(nameEntry ? nameEntry[1] : "");
 

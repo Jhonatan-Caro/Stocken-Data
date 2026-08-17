@@ -1,8 +1,8 @@
 import {
-  getNombre,
-  getCategoria,
+  getName,
+  getCategory,
   getStock,
-  formatPrecio,
+  formatPrice,
   stockStatus,
 } from "../utils/productData";
 
@@ -18,6 +18,10 @@ const STOCK_KEYS = new Set(["stock", "Stock", "STOCK", "cantidad", "Cantidad"]);
 const PRICE_KEYS = new Set(["precio", "Precio", "price", "Price", "PRICE"]);
 const SKU_KEYS = new Set(["sku", "Sku", "SKU", "Codigo", "CODIGO"]);
 
+function hasValue(v) {
+  return v !== null && v !== undefined && v !== "" && v !== "—";
+}
+
 function humanize(key) {
   return String(key)
     .replace(/[_-]+/g, " ")
@@ -26,10 +30,10 @@ function humanize(key) {
     .replace(/^./, (c) => c.toUpperCase());
 }
 
-function deriveColumns(productos) {
+function deriveColumns(products) {
   const seen = new Set();
   const ordered = [];
-  productos.forEach((p) => {
+  products.forEach((p) => {
     if (!p?.data || typeof p.data !== "object") return;
     Object.keys(p.data).forEach((key) => {
       if (NAME_KEYS.has(key)) return;
@@ -41,19 +45,24 @@ function deriveColumns(productos) {
       ordered.push(key);
     });
   });
-  console.log("columnas dinámicas:", ordered);
-  return ordered;
+  // Solo conservar columnas dinámicas con al menos un valor real
+  return ordered.filter((col) =>
+    products.some((p) => {
+      const d = p?.data && typeof p.data === "object" ? p.data : {};
+      return hasValue(d[col]);
+    }),
+  );
 }
 
-function hasStockColumn(productos) {
-  return productos.some((p) => p?.stock !== undefined && p?.stock !== null);
+function hasStockColumn(products) {
+  return products.some((p) => p?.stock !== undefined && p?.stock !== null);
 }
 
 function renderCell(value, key) {
   if (value === null || value === undefined || value === "") return "—";
   if (PRICE_KEYS.has(key)) {
     const num = Number(value);
-    if (Number.isFinite(num)) return formatPrecio(num);
+    if (Number.isFinite(num)) return formatPrice(num);
   }
   if (typeof value === "object") {
     try {
@@ -65,8 +74,8 @@ function renderCell(value, key) {
   return String(value);
 }
 
-function ProductAvatar({ nombre }) {
-  const initial = String(nombre || "?")
+function ProductAvatar({ name }) {
+  const initial = String(name || "?")
     .trim()
     .charAt(0)
     .toUpperCase();
@@ -77,22 +86,95 @@ function ProductAvatar({ nombre }) {
   );
 }
 
+// Columnas fijas que preceden a las dinámicas. Cada una declara cómo saber si
+// un producto tiene valor (present) y cómo pintar su celda (cell). En el render
+// se descartan las columnas sin ningún valor en toda la tabla.
+const LEADING_COLUMNS = [
+  {
+    key: "product",
+    header: "Product",
+    present: (p) => getName(p) !== "—",
+    cellClass: "px-6 py-3",
+    cell: (p) => (
+      <div className="flex items-center gap-3">
+        <ProductAvatar name={getName(p)} />
+        <span className="font-medium text-gray-800">{getName(p)}</span>
+      </div>
+    ),
+  },
+  {
+    key: "sku",
+    header: "SKU",
+    present: (p) => hasValue(p.sku),
+    cellClass: "px-6 py-3 text-gray-600 whitespace-nowrap",
+    cell: (p) => p.sku ?? "—",
+  },
+  {
+    key: "category",
+    header: "Category",
+    present: (p) => getCategory(p) !== "—",
+    cellClass: "px-6 py-3 text-gray-600 whitespace-nowrap",
+    cell: (p) => getCategory(p),
+  },
+  {
+    key: "warehouse",
+    header: "Warehouse",
+    present: (p) => hasValue(p.warehouse),
+    cellClass: "px-6 py-3 text-gray-600 whitespace-nowrap",
+    cell: (p) => (hasValue(p.warehouse) ? p.warehouse : "—"),
+  },
+  {
+    key: "location",
+    header: "Location",
+    present: (p) => hasValue(p.location),
+    cellClass: "px-6 py-3 text-gray-600 whitespace-nowrap",
+    cell: (p) => (hasValue(p.location) ? p.location : "—"),
+  },
+  {
+    key: "stock",
+    header: "Stock",
+    present: (p) => {
+      const s = p.stock ?? getStock(p);
+      return s !== null && s !== undefined;
+    },
+    cellClass: "px-6 py-3 font-medium",
+    cell: (p) => {
+      const s = p.stock ?? getStock(p);
+      return (
+        <span
+          className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${
+            s <= 0
+              ? "bg-red-100 text-red-600"
+              : s < 20
+                ? "bg-amber-100 text-amber-700"
+                : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
+          {s ?? "—"}
+        </span>
+      );
+    },
+  },
+];
+
 export default function ProductsTable({
-  productos = [],
+  products = [],
   onSelect,
   selectedId,
   showViewAll = true,
   limit,
 }) {
-  const data = limit ? productos.slice(0, limit) : productos;
-  const dynamicColumns = deriveColumns(productos);
-  const showStatus = hasStockColumn(productos);
-  console.log("showStatus:", showStatus);
-  console.log("p.stock del primer producto:", productos[0]?.stock);
-  const totalCols = 2 + dynamicColumns.length + (showStatus ? 1 : 0);
+  const data = limit ? products.slice(0, limit) : products;
+  const leadingColumns = LEADING_COLUMNS.filter((c) =>
+    products.some((p) => c.present(p)),
+  );
+  const dynamicColumns = deriveColumns(products);
+  const showStatus = hasStockColumn(products);
+  const totalCols =
+    leadingColumns.length + dynamicColumns.length + (showStatus ? 1 : 0);
 
   return (
-    <section className="bg-white rounded-2xl shadow-sm">
+    <section className="w-full max-w-full overflow-hidden bg-white rounded-2xl shadow-sm">
       <div className="flex items-center justify-between px-6 pt-5 pb-3">
         <h2 className="text-base font-semibold text-gray-800">
           Recent Products
@@ -107,14 +189,18 @@ export default function ProductsTable({
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="w-full overflow-x-auto overflow-y-auto max-h-[500px]">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr className="text-gray-500 text-[11px] uppercase tracking-wider">
-              <th className="text-left font-semibold px-6 py-3">Product</th>
-              <th className="text-left font-semibold px-6 py-3">SKU</th>
-              <th className="text-left font-semibold px-6 py-3">Category</th>
-              <th className="text-left font-semibold px-6 py-3">Stock</th>
+              {leadingColumns.map((col) => (
+                <th
+                  key={col.key}
+                  className="text-left font-semibold px-6 py-3 whitespace-nowrap"
+                >
+                  {col.header}
+                </th>
+              ))}
               {dynamicColumns.map((col) => (
                 <th
                   key={col}
@@ -132,10 +218,10 @@ export default function ProductsTable({
             {data.length === 0 && (
               <tr>
                 <td
-                  colSpan={totalCols}
+                  colSpan={totalCols || 1}
                   className="px-6 py-10 text-center text-gray-400"
                 >
-                  {productos.length === 0
+                  {products.length === 0
                     ? "Aún no hay productos."
                     : "No hay productos en esta categoría."}
                 </td>
@@ -155,35 +241,11 @@ export default function ProductsTable({
                     isSelected ? "bg-blue-50/50" : "hover:bg-gray-50"
                   }`}
                 >
-                  {/* PRODUCT */}
-                  <td className="px-6 py-3">
-                    <div className="flex items-center gap-3">
-                      <ProductAvatar nombre={getNombre(p)} />
-                      <span className="font-medium text-gray-800">
-                        {getNombre(p)}
-                      </span>
-                    </div>
-                  </td>
-                  {/* SKU */}
-                  <td className="px-6 py-3 text-gray-600 whitespace-nowrap">
-                    {p.sku ?? "—"}
-                  </td>
-                  <td className="px-6 py-3 text-gray-600 whitespace-nowrap">
-                    {getCategoria(p)}
-                  </td>
-                  <td className="px-6 py-3 font-medium">
-                    <span
-                      className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${
-                        p.stock <= 0
-                          ? "bg-red-100 text-red-600"
-                          : p.stock < 20
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {p.stock ?? "—"}
-                    </span>
-                  </td>
+                  {leadingColumns.map((col) => (
+                    <td key={col.key} className={col.cellClass}>
+                      {col.cell(p)}
+                    </td>
+                  ))}
                   {dynamicColumns.map((col) => (
                     <td
                       key={col}

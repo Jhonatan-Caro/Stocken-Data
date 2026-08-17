@@ -1,6 +1,6 @@
 import * as productsService from "./products.service.js";
 
-export async function getProductos(req, res) {
+export async function getProducts(req, res) {
   try {
     const rows = await productsService.getAll(req.user.id);
     res.json(rows);
@@ -11,7 +11,7 @@ export async function getProductos(req, res) {
   }
 }
 
-export async function createProducto(req, res) {
+export async function createProduct(req, res) {
   try {
     const product = await productsService.create(req.user.id, req.body);
     res.status(201).json(product);
@@ -22,7 +22,7 @@ export async function createProducto(req, res) {
   }
 }
 
-export async function updateProducto(req, res) {
+export async function updateProduct(req, res) {
   try {
     const product = await productsService.update(
       req.params.id,
@@ -37,7 +37,7 @@ export async function updateProducto(req, res) {
   }
 }
 
-export async function deleteProducto(req, res) {
+export async function deleteProduct(req, res) {
   try {
     await productsService.remove(req.params.id, req.user.id);
     res.sendStatus(204);

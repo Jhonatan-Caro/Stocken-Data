@@ -1,8 +1,5 @@
 import { parse } from "csv-parse/sync";
 
-// Importador CSV: mismas opciones que usaba parseCSVBuffer en los
-// controllers, así el comportamiento para CSV no cambia. El archivo entero
-// se expone como una única hoja sintética "default".
 export const CsvImporter = {
   format: "csv",
 

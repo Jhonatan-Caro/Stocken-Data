@@ -5,17 +5,29 @@ import {
   FiArrowRight,
   FiArrowLeft,
   FiCheck,
+  FiAlertTriangle,
 } from "react-icons/fi";
+import {
+  autoMapColumns,
+  analyzeMapping,
+  typeMatches,
+} from "../lib/importMapping";
 
-// steps: 0 = selección, 1 = mapper, 2 = resultado
+function initToggles(toggles) {
+  return Object.fromEntries(
+    (toggles ?? []).map((t) => [t.key, t.default ?? false]),
+  );
+}
+
 export default function CSVUploadModal({
   open,
   onClose,
-  onGetColumns, // (file) => { columns, preview }
-  onUpload, // (file, categoryId, mapping) => result   [productos]
-  // (file, mapping) => result               [ventas]
-  categorias, // solo productos; undefined en ventas
-  requiredFields, // [{ key, label, required }]
+  onGetColumns,
+  onUpload,
+  categories,
+  requiredFields,
+  title,
+  toggles,
 }) {
   const [step, setStep] = useState(0);
   const [file, setFile] = useState(null);
@@ -25,13 +37,16 @@ export default function CSVUploadModal({
   const [sheets, setSheets] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [mapping, setMapping] = useState({});
+  const [mappingMeta, setMappingMeta] = useState({});
+  const [columnTypes, setColumnTypes] = useState({});
+  const [toggleValues, setToggleValues] = useState(() => initToggles(toggles));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
   if (!open) return null;
 
-  const needsCategory = Boolean(categorias);
+  const needsCategory = Boolean(categories);
 
   function reset() {
     setStep(0);
@@ -42,6 +57,9 @@ export default function CSVUploadModal({
     setSheets([]);
     setSelectedSheet("");
     setMapping({});
+    setMappingMeta({});
+    setColumnTypes({});
+    setToggleValues(initToggles(toggles));
     setError(null);
     setResult(null);
   }
@@ -51,22 +69,21 @@ export default function CSVUploadModal({
     onClose();
   }
 
-  // Pre-mapear automáticamente si el nombre coincide exactamente
-  function autoMapColumns(cols) {
-    const autoMap = {};
-    requiredFields.forEach(({ key }) => {
-      if (cols.includes(key)) autoMap[key] = key;
-    });
-    return autoMap;
+  function applyAutoMap(cols, previewRows) {
+    const { mapping: auto, meta, columnTypes: types } = autoMapColumns(
+      cols,
+      requiredFields,
+      previewRows,
+    );
+    setMapping(auto);
+    setMappingMeta(meta);
+    setColumnTypes(types);
   }
 
-  // Paso 0 → 1: subir archivo y obtener columnas (y hojas si es Excel)
   async function handleLoadColumns(e) {
     e.preventDefault();
     setError(null);
     if (!file) return setError("Selecciona un archivo CSV o Excel.");
-    if (needsCategory && !categoryId)
-      return setError("Selecciona una categoría.");
     setBusy(true);
     try {
       const data = await onGetColumns(file);
@@ -74,7 +91,7 @@ export default function CSVUploadModal({
       setPreview(data.preview);
       setSheets(data.sheets || []);
       setSelectedSheet(data.defaultSheet || "");
-      setMapping(autoMapColumns(data.columns));
+      applyAutoMap(data.columns, data.preview);
       setStep(1);
     } catch (err) {
       setError(err?.response?.data?.message || "Error al leer el archivo.");
@@ -83,18 +100,15 @@ export default function CSVUploadModal({
     }
   }
 
-  // Cambiar de hoja: columnas y preview vienen de la respuesta ya cargada,
-  // sin nueva llamada al backend; el mapping se recalcula para la hoja nueva
   function handleSheetChange(name) {
     const sheet = sheets.find((s) => s.name === name);
     if (!sheet) return;
     setSelectedSheet(name);
     setColumns(sheet.columns);
     setPreview(sheet.preview);
-    setMapping(autoMapColumns(sheet.columns));
+    applyAutoMap(sheet.columns, sheet.preview);
   }
 
-  // Paso 1 → 2: importar con mapping confirmado
   async function handleImport(e) {
     e.preventDefault();
     setError(null);
@@ -104,11 +118,17 @@ export default function CSVUploadModal({
     if (missing.length) {
       return setError(`Campos obligatorios sin mapear: ${missing.join(", ")}`);
     }
+
+    if (needsCategory && !categoryId && !mapping.category) {
+      return setError(
+        "Selecciona una categoría por defecto o mapea la columna de categoría del archivo.",
+      );
+    }
     setBusy(true);
     try {
       const res = needsCategory
-        ? await onUpload(file, categoryId, mapping, selectedSheet)
-        : await onUpload(file, mapping, selectedSheet);
+        ? await onUpload(file, categoryId, mapping, selectedSheet, toggleValues)
+        : await onUpload(file, mapping, selectedSheet, toggleValues);
       setResult(res);
       setStep(2);
     } catch (err) {
@@ -118,19 +138,35 @@ export default function CSVUploadModal({
     }
   }
 
-  const requiredMapped = requiredFields
-    .filter((f) => f.required)
-    .every((f) => mapping[f.key]);
+  const warnings = analyzeMapping(mapping, requiredFields, columnTypes, columns);
+  const hasBlocking = warnings.some((w) => w.blocking);
+  const blockingWarnings = warnings.filter((w) => w.blocking);
+  const advisoryWarnings = warnings.filter((w) => !w.blocking);
+
+  function firstExample(col) {
+    if (!col) return null;
+    for (const row of preview) {
+      const value = row?.[col];
+      if (value !== null && value !== undefined && String(value).trim() !== "") {
+        return String(value);
+      }
+    }
+    return null;
+  }
+
+  function handleMappingChange(key, col) {
+    setMapping((m) => ({ ...m, [key]: col }));
+    setMappingMeta((meta) => ({ ...meta, [key]: col ? "manual" : undefined }));
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        {/* Header */}
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-base font-semibold text-gray-800">
-              {needsCategory ? "Importar productos" : "Importar ventas"} desde
-              archivo
+              {title ??
+                `${needsCategory ? "Importar productos" : "Importar ventas"} desde archivo`}
             </h3>
             <div className="flex items-center gap-1.5 mt-1.5">
               {["Archivo", "Mapear columnas", "Resultado"].map((label, i) => (
@@ -165,24 +201,31 @@ export default function CSVUploadModal({
           </button>
         </div>
 
-        {/* PASO 0: selección de archivo */}
         {step === 0 && (
           <form onSubmit={handleLoadColumns} className="flex flex-col gap-4">
             {needsCategory && (
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm text-gray-700">Categoría</span>
+                <span className="text-sm text-gray-700">
+                  Categoría por defecto
+                </span>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:bg-white outline-none"
                 >
-                  <option value="">Selecciona una categoría</option>
-                  {categorias.map((c) => (
+                  <option value="">
+                    Sin categoría por defecto (usar columna del archivo)
+                  </option>
+                  {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
                   ))}
                 </select>
+                <span className="text-xs text-gray-400">
+                  Opcional si tu archivo tiene una columna de categoría: la
+                  mapearás en el siguiente paso y se crearán automáticamente.
+                </span>
               </label>
             )}
             <label className="flex flex-col gap-1.5">
@@ -231,14 +274,21 @@ export default function CSVUploadModal({
           </form>
         )}
 
-        {/* PASO 1: mapper de columnas */}
         {step === 1 && (
           <form onSubmit={handleImport} className="flex flex-col gap-4">
             <p className="text-xs text-gray-500">
               Indica qué columna de tu archivo corresponde a cada campo.
+              <br/>
+              Apoyate de la documentacion de la aplicacion para conocer los campos requeridos y el formato de cada uno:
             </p>
-
-            {/* Selector de hoja: solo para Excel con varias hojas */}
+            <a
+              href="https://example.com/documentation"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-700 text-xs font-medium"
+            >
+              Ver documentación
+            </a>
             {sheets.length > 1 && (
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm text-gray-700">Hoja del Excel</span>
@@ -256,48 +306,71 @@ export default function CSVUploadModal({
               </label>
             )}
 
-            {/* Tabla de mapeo */}
             <div className="border border-gray-100 rounded-xl overflow-hidden">
               <div className="grid grid-cols-3 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
                 <span>Campo</span>
                 <span className="text-center">→</span>
                 <span>Columna en tu archivo</span>
               </div>
-              {requiredFields.map(({ key, label, required }) => (
-                <div
-                  key={key}
-                  className="grid grid-cols-3 items-center px-3 py-2 border-t border-gray-100"
-                >
-                  <span className="text-sm text-gray-700">
-                    {label}
-                    {required && <span className="text-red-400 ml-0.5">*</span>}
-                  </span>
-                  <FiArrowRight
-                    className="text-gray-300 justify-self-center"
-                    size={14}
-                  />
-                  <select
-                    value={mapping[key] || ""}
-                    onChange={(e) =>
-                      setMapping((m) => ({ ...m, [key]: e.target.value }))
-                    }
-                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-gray-50 outline-none w-full"
+              {requiredFields.map((field) => {
+                const { key, label, required, type } = field;
+                const selectedCol = mapping[key] || "";
+                const example = firstExample(selectedCol);
+                const typeMismatch =
+                  selectedCol &&
+                  typeMatches(type, columnTypes[selectedCol]) === false;
+                return (
+                  <div
+                    key={key}
+                    className="grid grid-cols-3 gap-2 items-start px-3 py-2 border-t border-gray-100"
                   >
-                    <option value="">— sin mapear —</option>
-                    {columns.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-gray-700">
+                        {label}
+                        {required && (
+                          <span className="text-red-400 ml-0.5">*</span>
+                        )}
+                      </span>
+                      <ConfidenceBadge
+                        confidence={mappingMeta[key]}
+                        mapped={Boolean(selectedCol)}
+                      />
+                    </div>
+                    <FiArrowRight
+                      className="text-gray-300 justify-self-center mt-2"
+                      size={14}
+                    />
+                    <div className="flex flex-col gap-1">
+                      <select
+                        value={selectedCol}
+                        onChange={(e) =>
+                          handleMappingChange(key, e.target.value)
+                        }
+                        className={`border rounded-lg px-2 py-1.5 text-xs bg-gray-50 outline-none w-full ${
+                          typeMismatch ? "border-amber-400" : "border-gray-200"
+                        }`}
+                      >
+                        <option value="">— sin mapear —</option>
+                        {columns.map((col) => (
+                          <option key={col} value={col}>
+                            {col}
+                          </option>
+                        ))}
+                      </select>
+                      {example && (
+                        <span className="text-[11px] text-gray-400 truncate">
+                          p.ej.: {example}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Preview */}
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1.5">
-                Vista previa (primeras {preview.length} filas)
+                Vista previa (primeras {Math.min(preview.length, 5)} filas)
               </p>
               <div className="overflow-x-auto border border-gray-100 rounded-xl">
                 <table className="text-xs w-full">
@@ -319,7 +392,7 @@ export default function CSVUploadModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.map((row, i) => (
+                    {preview.slice(0, 5).map((row, i) => (
                       <tr
                         key={i}
                         className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -343,6 +416,44 @@ export default function CSVUploadModal({
               </div>
             </div>
 
+            {toggles?.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {toggles.map((t) => (
+                  <label
+                    key={t.key}
+                    className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={toggleValues[t.key] ?? false}
+                      onChange={(e) =>
+                        setToggleValues((v) => ({
+                          ...v,
+                          [t.key]: e.target.checked,
+                        }))
+                      }
+                      className="mt-0.5 accent-[#03a696]"
+                    />
+                    <span>
+                      {t.label}
+                      {t.hint && (
+                        <span className="block text-xs text-gray-400">
+                          {t.hint}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {blockingWarnings.length > 0 && (
+              <WarningPanel warnings={blockingWarnings} tone="error" />
+            )}
+            {advisoryWarnings.length > 0 && (
+              <WarningPanel warnings={advisoryWarnings} tone="advisory" />
+            )}
+
             {error && <ErrorBox message={error} />}
 
             <div className="flex justify-between gap-2 mt-1">
@@ -358,7 +469,7 @@ export default function CSVUploadModal({
               </button>
               <button
                 type="submit"
-                disabled={busy || !requiredMapped}
+                disabled={busy || hasBlocking}
                 className="px-4 py-2 rounded-lg bg-[#0b3041] hover:bg-[#03a696] disabled:opacity-60 text-white text-sm font-semibold transition"
               >
                 {busy ? "Importando..." : "Importar"}
@@ -367,7 +478,6 @@ export default function CSVUploadModal({
           </form>
         )}
 
-        {/* PASO 2: resultado */}
         {step === 2 && result && (
           <div className="flex flex-col items-center gap-4 py-4">
             <div
@@ -392,7 +502,6 @@ export default function CSVUploadModal({
               )}
             </div>
 
-            {/* Errores por fila */}
             {result.errors?.length > 0 && (
               <div className="w-full max-h-32 overflow-y-auto border border-red-100 rounded-lg bg-red-50 p-2">
                 {result.errors.map((e, i) => (
@@ -430,6 +539,47 @@ function ErrorBox({ message }) {
   return (
     <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
       {message}
+    </div>
+  );
+}
+
+function ConfidenceBadge({ confidence, mapped }) {
+  if (!mapped) return null;
+
+  if (confidence === "high") {
+    return (
+      <span className="inline-flex w-fit items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-1.5 py-0.5">
+        <FiCheck size={9} /> auto
+      </span>
+    );
+  }
+  if (confidence === "medium" || confidence === "low") {
+    return (
+      <span className="inline-flex w-fit items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-1.5 py-0.5">
+        <FiAlertTriangle size={9} /> revisar
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex w-fit items-center text-[10px] font-medium text-gray-500 bg-gray-100 rounded-full px-1.5 py-0.5">
+      manual
+    </span>
+  );
+}
+
+function WarningPanel({ warnings, tone }) {
+  const styles =
+    tone === "error"
+      ? "text-red-600 bg-red-50 border-red-100"
+      : "text-amber-700 bg-amber-50 border-amber-100";
+  return (
+    <div className={`text-xs rounded-lg border px-3 py-2 flex flex-col gap-1 ${styles}`}>
+      {warnings.map((w, i) => (
+        <div key={i} className="flex items-start gap-1.5">
+          <FiAlertTriangle size={12} className="mt-0.5 shrink-0" />
+          <span>{w.message}</span>
+        </div>
+      ))}
     </div>
   );
 }

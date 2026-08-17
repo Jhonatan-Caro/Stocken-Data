@@ -1,4 +1,5 @@
 import pool from "../../config/db.js";
+import { getOrCreateByName } from "../categories/categories.service.js";
 
 const PRODUCT_COLUMNS = new Set(["category_id", "sku", "stock", "data"]);
 
@@ -38,7 +39,8 @@ async function assertCategoryBelongsToUser(client, categoryId, userId) {
 
 export async function getAll(userId) {
   const { rows } = await pool.query(
-    `SELECT p.id, p.user_id, p.category_id, p.sku, p.stock, p.data, p.created_at,
+    `SELECT p.id, p.user_id, p.category_id, p.sku, p.warehouse, p.location,
+            p.stock, p.data, p.created_at,
             c.name AS category_name
      FROM products p
      LEFT JOIN dynamic_categories c ON c.id = p.category_id
@@ -140,24 +142,42 @@ export async function remove(productId, userId) {
 export async function bulkInsertProducts(
   userId,
   categoryId,
-  filas,
+  fileRows,
   mapping,
   filename,
 ) {
-  const id = assertCategoryId(categoryId);
 
-  if (!Array.isArray(filas) || filas.length === 0) {
+  const hasCategoryCol = Boolean(mapping.category);
+  const defaultCategoryId =
+    categoryId !== undefined && categoryId !== null && categoryId !== ""
+      ? assertCategoryId(categoryId)
+      : null;
+
+  if (!hasCategoryCol && defaultCategoryId === null) {
+    throw {
+      status: 400,
+      message:
+        "Selecciona una categoría por defecto o mapea la columna de categoría del archivo",
+    };
+  }
+
+  if (!Array.isArray(fileRows) || fileRows.length === 0) {
     throw { status: 400, message: "El archivo no contiene filas válidas" };
   }
 
-  const fileColumns = Object.keys(filas[0]);
+  const fileColumns = Object.keys(fileRows[0]);
   if (!fileColumns.includes(mapping.sku)) {
     throw {
       status: 400,
       message: `La columna SKU "${mapping.sku}" no existe en el archivo`,
     };
   }
-  // stock es opcional: sin mapear, los productos se importan como catálogo
+  if (hasCategoryCol && !fileColumns.includes(mapping.category)) {
+    throw {
+      status: 400,
+      message: `La columna categoría "${mapping.category}" no existe en el archivo`,
+    };
+  }
   const hasStock = Boolean(mapping.stock);
   if (hasStock && !fileColumns.includes(mapping.stock)) {
     throw {
@@ -166,13 +186,28 @@ export async function bulkInsertProducts(
     };
   }
 
+  const hasWarehouse = Boolean(mapping.warehouse);
+  if (hasWarehouse && !fileColumns.includes(mapping.warehouse)) {
+    throw {
+      status: 400,
+      message: `La columna almacén "${mapping.warehouse}" no existe en el archivo`,
+    };
+  }
+  const hasLocation = Boolean(mapping.location);
+  if (hasLocation && !fileColumns.includes(mapping.location)) {
+    throw {
+      status: 400,
+      message: `La columna ubicación "${mapping.location}" no existe en el archivo`,
+    };
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await assertCategoryBelongsToUser(client, id, userId);
+    if (defaultCategoryId !== null) {
+      await assertCategoryBelongsToUser(client, defaultCategoryId, userId);
+    }
 
-    // Registrar el import para trazabilidad
-    // source guarda el nombre del archivo subido; la columna es VARCHAR(64)
     const source = (filename?.trim() || "csv_products").slice(0, 64);
     const importResult = await client.query(
       `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
@@ -187,40 +222,61 @@ export async function bulkInsertProducts(
     const errors = [];
     const insertedRows = [];
 
-    // Un SKU puede venir repetido en el archivo (p. ej. stock por almacén):
-    // se agrupa sumando el stock y fusionando el resto de campos en data.
-    const porSku = new Map();
+    const byKey = new Map();
 
-    for (let i = 0; i < filas.length; i++) {
-      const fila = filas[i];
+    for (let i = 0; i < fileRows.length; i++) {
+      const fileRow = fileRows[i];
 
       try {
-        const sku = fila[mapping.sku]?.toString().trim();
+        const sku = fileRow[mapping.sku]?.toString().trim();
         if (!sku) throw { message: "SKU vacío" };
 
         let stock = 0;
         if (hasStock) {
-          stock = parseInt(fila[mapping.stock], 10);
+          stock = parseInt(fileRow[mapping.stock], 10);
           if (isNaN(stock) || stock < 0) throw { message: "Stock inválido" };
         }
 
-        // El data JSONB guarda el row completo (payload original preservado)
-        const data = { ...fila };
+        const warehouse = hasWarehouse
+          ? (fileRow[mapping.warehouse]?.toString().trim() ?? "")
+          : "";
+        const location = hasLocation
+          ? (fileRow[mapping.location]?.toString().trim() ?? "")
+          : "";
 
-        // Una vez mapeado los campos importantes se eliminan de data para que solo vivan en db
+        const categoryName = hasCategoryCol
+          ? (fileRow[mapping.category]?.toString().trim() ?? "")
+          : "";
+
+        const data = { ...fileRow };
+
         delete data[mapping.sku];
         if (hasStock) delete data[mapping.stock];
+        if (hasWarehouse) delete data[mapping.warehouse];
+        if (hasLocation) delete data[mapping.location];
+        if (hasCategoryCol) delete data[mapping.category];
 
         delete data.sku;
         delete data.stock;
 
-        const acumulado = porSku.get(sku);
-        if (acumulado) {
-          acumulado.stock += stock;
-          Object.assign(acumulado.data, data);
-          acumulado.rowCount++;
+        const key = `${sku}||${warehouse}||${location}`;
+        const acc = byKey.get(key);
+        if (acc) {
+          acc.stock += stock;
+          Object.assign(acc.data, data);
+          acc.categoryName ||= categoryName;
+          acc.rowCount++;
         } else {
-          porSku.set(sku, { stock, data, row: i + 2, rowCount: 1 }); // +2 = fila real en el archivo
+          byKey.set(key, {
+            sku,
+            warehouse,
+            location,
+            stock,
+            data,
+            categoryName,
+            row: i + 2,
+            rowCount: 1,
+          });
         }
       } catch (rowErr) {
         rowsFailed++;
@@ -232,19 +288,42 @@ export async function bulkInsertProducts(
     // import de stock no borre los atributos del catálogo, y solo toca el
     // stock cuando la columna vino mapeada.
     const stockUpdate = hasStock ? "stock = EXCLUDED.stock," : "";
+    const categoryCache = new Map();
 
-    for (const [sku, { stock, data, row, rowCount }] of porSku) {
+    for (const [
+      ,
+      { sku, warehouse, location, stock, data, categoryName, row, rowCount },
+    ] of byKey) {
       try {
+        //   Resolver la categoría de este producto:
+        //   con nombre  -> buscar o crear (cacheado)
+        //   sin nombre  -> la categoría manual (o NULL si no la hay)
+        let productCategoryId = defaultCategoryId;
+        if (categoryName) {
+          const cacheKey = categoryName.toLowerCase();
+          if (!categoryCache.has(cacheKey)) {
+            categoryCache.set(
+              cacheKey,
+              await getOrCreateByName(client, userId, categoryName),
+            );
+          }
+          productCategoryId = categoryCache.get(cacheKey);
+        }
+
         const { rows } = await client.query(
-          `INSERT INTO products (user_id, category_id, sku, stock, data)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT ON CONSTRAINT uq_product_sku
+          `INSERT INTO products (user_id, category_id, sku, warehouse, location, stock, data)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT ON CONSTRAINT uq_product_identity
            DO UPDATE SET
              ${stockUpdate}
              data        = products.data || EXCLUDED.data,
-             category_id = EXCLUDED.category_id
-           RETURNING id, user_id, category_id, sku, stock, data, created_at`,
-          [userId, id, sku, stock, data],
+             -- [MODIFICADO] COALESCE: si este import trae categoría
+             -- (EXCLUDED) se actualiza; si la fila venía sin categoría
+             -- (NULL), se CONSERVA la que el producto ya tenía en vez
+             -- de pisarla con NULL
+             category_id = COALESCE(EXCLUDED.category_id, products.category_id)
+           RETURNING id, user_id, category_id, sku, warehouse, location, stock, data, created_at`,
+          [userId, productCategoryId, sku, warehouse, location, stock, data],
         );
 
         insertedRows.push(rows[0]);
@@ -262,7 +341,7 @@ export async function bulkInsertProducts(
 
     await client.query("COMMIT");
 
-    return { importId, rowsOk, rowsFailed, errors, productos: insertedRows };
+    return { importId, rowsOk, rowsFailed, errors, products: insertedRows };
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
