@@ -4,9 +4,6 @@ backend/node_modules/
 .aider*
 node_modules/
 __pycache__/
-backend/Comandos necesarios.txt
-Usuarios-db.txt
-stockendata_db-data.tar.gz
 
 # Documentacion y notas de trabajo (no versionar)
 CAMBIOS_*.md

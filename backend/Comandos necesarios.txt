@@ -1,2 +1,0 @@
-Correro el servidor:
-	npm run dev
