@@ -1,6 +1,6 @@
 import * as statsService from "./stats.service.js";
 
-function parseDateRange(query) {
+export function parseDateRange(query) {
   const range = { from: null, to: null };
 
   for (const key of ["from", "to"]) {

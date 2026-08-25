@@ -5,6 +5,7 @@ import productsRoutes from "./modules/products/products.routes.js";
 import categoriesRoutes from "./modules/categories/categories.routes.js";
 import salesRoutes from "./modules/sales/sales.routes.js";
 import chatBotRoutes from "./modules/chatbot/chatbot.routes.js";
+import internalStatsRoutes from "./modules/sales/stats.internal.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -13,6 +14,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+
 
 app.use(
   cors({
@@ -35,6 +37,7 @@ app.use("/api/products", productsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/sales", salesRoutes);
 app.use(chatBotRoutes);
+app.use(internalStatsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Servidor funcionando ✅");
