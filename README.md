@@ -103,7 +103,9 @@ Un mismo SKU puede existir en varios almacenes con su propio stock, así que la 
 ### Endpoints en backend para consumir queries y schemas desde chatbot_Service
 
 Una de las últimas tareas realizadas en el servicio del chatbot ha consistido en implementar una nueva forma de consumir las queries utilizadas por el agente.
+
 Para ello, se han establecido los endpoints correspondientes en el backend, conectados con `stats.service.js`, que permiten consumir las queries reales utilizadas para generar las estadísticas del dashboard. Estas mismas consultas se han replicado en Python mediante funciones espejo para que el agente pueda acceder a la misma información.
+
 Este refactor se ha realizado con el objetivo de mantener la consistencia y coherencia de la información en toda la aplicación. De esta forma, el chatbot trabaja con los mismos datos que el cliente puede visualizar en el dashboard, evitando que el agente genere respuestas inventadas, incorrectas o que no coincidan con la información real de la aplicación.
 
 ---
