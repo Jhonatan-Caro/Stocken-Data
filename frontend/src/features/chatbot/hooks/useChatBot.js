@@ -1,36 +1,36 @@
 import { useState, useCallback } from "react";
-import { questionChatBot } from "../services/chatService";
+import { askChatBot } from "../services/chatService";
 
 export default function useChatBot() {
   const [visible, setVisible] = useState(false);
-  const [mensajes, setMensajes] = useState([]);
-  const [pregunta, setPregunta] = useState("");
-  const [cargando, setCargando] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const toggleChatBot = useCallback(() => {
     setVisible((prev) => !prev);
   }, []);
 
-  const enviarPregunta = async () => {
-    if (!pregunta.trim()) return;
+  const sendQuestion = async () => {
+    if (!question.trim()) return;
 
-    const nuevaPregunta = { tipo: "usuario", texto: pregunta };
-    setMensajes([...mensajes, nuevaPregunta]);
-    setCargando(true);
+    const userMessage = { type: "user", text: question };
+    setMessages([...messages, userMessage]);
+    setLoading(true);
 
     try {
-      const data = await questionChatBot(pregunta);
-      const respuestaBot = { tipo: "bot", texto: data.respuesta };
-      setMensajes((prev) => [...prev, respuestaBot]);
+      const data = await askChatBot(question);
+      const botMessage = { type: "bot", text: data.answer };
+      setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error("Error al consultar el chatbot:", error);
-      setMensajes((prev) => [
+      setMessages((prev) => [
         ...prev,
-        { tipo: "bot", texto: "Hubo un error al obtener respuesta." },
+        { type: "bot", text: "Hubo un error al obtener respuesta." },
       ]);
     } finally {
-      setPregunta("");
-      setCargando(false);
+      setQuestion("");
+      setLoading(false);
     }
   };
 
@@ -42,10 +42,10 @@ export default function useChatBot() {
     toggleChatBot,
     openChatBot,
     closeChatBot,
-    enviarPregunta,
-    mensajes,
-    setPregunta,
-    pregunta,
-    cargando,
+    sendQuestion,
+    messages,
+    setQuestion,
+    question,
+    loading,
   };
 }

@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from chatBot import consultar_db
+from api.agent.service import consult_db
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 
 app = FastAPI()
@@ -15,15 +14,15 @@ app.add_middleware(
     allow_headers=["*"],  # Permitir todos los headers
 )
 
-class Pregunta(BaseModel):
-    question: str
-    usuario_id: int
+class Question(BaseModel):
+    ask: str
+    user_id: int
 
 @app.post("/chat")
-async def chat(pregunta: Pregunta):
+async def chat(question: Question):
     try:
-        respuesta = consultar_db(pregunta.question, pregunta.usuario_id)
-        return {"respuesta": respuesta}
+        response = consult_db(question.ask, question.user_id)
+        return {"respuesta": response}
     except Exception as e:
         print(f"Error al procesar la pregunta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
