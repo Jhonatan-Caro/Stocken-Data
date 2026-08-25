@@ -9,6 +9,12 @@ __pycache__/
 CAMBIOS_*.md
 README_COMENTARIOS.md
 Fixes
+ANALISIS_CHATBOT_SERVICE.md
+COMPARATIVA_MODELO_REVISADO.md
+GUIA_P0_ARREGLAR_TOOLS.md
+MODELO_REVISADO.md
+P0B_STATS_POR_HTTP.md
+
 
 # Volcados/backups de la base de datos (no versionar)
 *.tar.gz
