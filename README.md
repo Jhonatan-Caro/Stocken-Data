@@ -115,4 +115,4 @@ MIT - ver [LICENSE](LICENSE).
 ## 👤 Autor
 
 **Jhonatan Caro Suárez**  
-[GitHub](https://github.com/Jhonatan-Caro) · [LinkedIn](https://www.linkedin.com/in/jhonatan-caro-suarez-015b16293)
+[GitHub](https://github.com/Jhonatan-Caro) · [LinkedIn](https://www.linkedin.com/in/jhonatan-caro-b29b47412/)
