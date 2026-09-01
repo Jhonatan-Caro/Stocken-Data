@@ -18,7 +18,6 @@ export default function useProducts() {
     setError(null);
     try {
       const data = await getProducts();
-      console.log("productos recibidos:", JSON.stringify(data[0], null, 2));
       setProducts(Array.isArray(data) ? data : []);
       return data;
     } catch (err) {
