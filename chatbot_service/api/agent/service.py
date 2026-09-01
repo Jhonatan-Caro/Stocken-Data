@@ -1,4 +1,5 @@
 from api.agent.executor import get_agent_executor
+from datetime import date
 
 def consult_db(question: str, user_id: int) -> str:
     try:
@@ -6,6 +7,7 @@ def consult_db(question: str, user_id: int) -> str:
         result = agent_executor.invoke({
             "question": question, 
             "user_id": user_id,
+            "current_date": date.today().isoformat(),
             "chat_history": []
         })
         if isinstance(result, dict) and "output" in result:

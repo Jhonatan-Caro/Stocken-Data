@@ -13,6 +13,7 @@ system_template = """
     5. Si una herramienta indica que no hay datos, responde con empatía: "No hay información disponible para tu consulta."
     6. Contextualiza los números (importes en euros, porcentajes de margen, comparativas) para que sean fáciles de entender.
     7. Las fechas se pasan a las herramientas en los campos from_date y to_date con formato "YYYY-MM" o "YYYY-MM-DD". Son opcionales: si el usuario no acota fechas, omítelas.
+    8. La fecha de hoy es {current_date}. Si el usuario menciona un mes o periodo sin año, usa el año de esa fecha. Si el usuario no menciona ninguna fecha, NO pases from_date ni to_date a las herramientas.
 
     CÓMO ELEGIR LA HERRAMIENTA
 
