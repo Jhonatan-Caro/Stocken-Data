@@ -29,6 +29,12 @@ CREATE TABLE dynamic_categories (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Unicidad por usuario insensible a mayúsculas: "Informática" e
+-- "informática" son la misma categoría. Habilita el ON CONFLICT
+-- (user_id, lower(name)) del get-or-create de bulkInsertProducts.
+CREATE UNIQUE INDEX uq_dynamic_categories_user_name
+    ON dynamic_categories (user_id, lower(name));
+
 -- =========================================
 -- PRODUCTS
 -- =========================================
@@ -40,9 +46,12 @@ CREATE TABLE products (
                     REFERENCES users(id)
                     ON DELETE CASCADE,
 
-    category_id INTEGER NOT NULL
+    -- Opcional: un producto puede quedar "Sin categoría". Al borrar una
+    -- categoría el producto NO se destruye (con sus ventas): se pone NULL.
+    -- Las queries usan LEFT JOIN + COALESCE, así que toleran el NULL.
+    category_id INTEGER
                     REFERENCES dynamic_categories(id)
-                    ON DELETE CASCADE,
+                    ON DELETE SET NULL,
 
     sku         VARCHAR(64) NOT NULL,
     warehouse   VARCHAR(64) NOT NULL DEFAULT '',
@@ -161,6 +170,12 @@ CREATE TABLE sales (
                     REFERENCES sale_orders(id)
                     ON DELETE CASCADE,
 
+    -- Identificador de la línea en el sistema origen ("ID línea" del
+    -- archivo). Clave de NEGOCIO de la línea: reimportar el mismo archivo
+    -- hace UPSERT en vez de duplicar. NULLABLE: fuentes como webhooks
+    -- pueden no traerlo (esas líneas se insertan siempre, sin idempotencia).
+    line_ref    VARCHAR(64),
+
     source      VARCHAR(64) NOT NULL,       -- 'csv_import', 'shopify_webhook', etc.
     quantity    INTEGER NOT NULL,
     total       NUMERIC(10,2) NOT NULL,     -- neto cobrado por la línea (c/IVA)
@@ -192,6 +207,14 @@ CREATE INDEX idx_sales_sold_at    ON sales (sold_at);
 CREATE INDEX idx_sales_data       ON sales USING GIN (data);
 CREATE INDEX idx_sales_order_id   ON sales (order_id);
 CREATE INDEX idx_sales_channel    ON sales (user_id, channel);
+
+-- Clave de negocio de la línea, única por usuario y PARCIAL (solo cuando hay
+-- line_ref): habilita el ON CONFLICT (user_id, line_ref) del importador para
+-- que reimportar el mismo archivo actualice en vez de duplicar. Las líneas sin
+-- line_ref quedan fuera del índice y se insertan siempre.
+CREATE UNIQUE INDEX uq_sales_user_line_ref
+    ON sales (user_id, line_ref)
+    WHERE line_ref IS NOT NULL;
 
 -- =========================================
 -- INVENTORY MOVEMENTS
