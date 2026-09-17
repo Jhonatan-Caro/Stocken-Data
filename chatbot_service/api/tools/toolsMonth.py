@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from api.clients.stats_client import sales_by_month, StatsBadRequest, StatsUnavailable
+from api.agent.context import get_current_user_id
 from formatting import _money, _pct
 
 
 class MonthRangeInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'. Omitir = sin límite.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
 
@@ -17,7 +17,6 @@ class PredictSalesInput(MonthRangeInput):
 
 
 class CompareMonthsInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     month_a: str = Field(..., description="Primer mes a comparar, formato 'YYYY-MM'.")
     month_b: str = Field(..., description="Segundo mes a comparar, formato 'YYYY-MM'.")
 
@@ -30,10 +29,10 @@ def monthly_sales_evolution(input: MonthRangeInput = None, **kwargs) -> str:
     Use it for trend questions: "how are sales evolving", "sales this year by month".
     DO NOT use it for product/channel/category detail or overall totals.
     """
-    if input is None and kwargs:
+    if input is None:
         input = MonthRangeInput(**kwargs)
     try:
-        rows = sales_by_month(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_month(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -55,10 +54,10 @@ def best_month(input: MonthRangeInput = None, **kwargs) -> str:
     Use it for: "my best month", "when did I sell the most".
     DO NOT use it for full evolution (use monthly evolution) nor product detail.
     """
-    if input is None and kwargs:
+    if input is None:
         input = MonthRangeInput(**kwargs)
     try:
-        rows = sales_by_month(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_month(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -78,10 +77,10 @@ def worst_month(input: MonthRangeInput = None, **kwargs) -> str:
     Use it for: "my worst month", "when did I sell the least".
     DO NOT use it for full evolution (use monthly evolution) nor product detail.
     """
-    if input is None and kwargs:
+    if input is None:
         input = MonthRangeInput(**kwargs)
     try:
-        rows = sales_by_month(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_month(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -103,10 +102,10 @@ def predict_next_month_sales(input: PredictSalesInput = None, **kwargs) -> str:
     Use it for: "how much will I sell next month", "estimate next month".
     Explain to the user it's a simple moving average, not a real prediction.
     """
-    if input is None and kwargs:
+    if input is None:
         input = PredictSalesInput(**kwargs)
     try:
-        rows = sales_by_month(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_month(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -129,10 +128,10 @@ def compare_months(input: CompareMonthsInput = None, **kwargs) -> str:
     Use it for: "compare June with July", "how did March do versus February".
     DO NOT use it for full evolution or ranges (use monthly evolution).
     """
-    if input is None and kwargs:
+    if input is None:
         input = CompareMonthsInput(**kwargs)
     try:
-        rows = sales_by_month(input.user_id)
+        rows = sales_by_month(get_current_user_id())
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:

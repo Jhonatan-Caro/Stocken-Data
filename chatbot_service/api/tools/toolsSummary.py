@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from api.clients.stats_client import sales_summary, StatsBadRequest, StatsUnavailable
+from api.agent.context import get_current_user_id
 from formatting import _money, _pct
 
 
 class _SummaryRangeInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'. Omitir = sin límite.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
 
@@ -33,10 +33,10 @@ def summary_sales(input: SummarySales = None, **kwargs) -> str:
     Use it for global questions: "how are my sales going", "total this year".
     DO NOT use it for product/channel/category detail or month evolution.
     """
-    if input is None and kwargs:
+    if input is None:
         input = SummarySales(**kwargs)
     try:
-        s = sales_summary(input.user_id, input.from_date, input.to_date)
+        s = sales_summary(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -62,10 +62,10 @@ def average_ticket(input: AverageTicket = None, **kwargs) -> str:
     Use it for: "what's my average ticket", "average order value".
     DO NOT use it for full KPIs (use summary) or product detail.
     """
-    if input is None and kwargs:
+    if input is None:
         input = AverageTicket(**kwargs)
     try:
-        s = sales_summary(input.user_id, input.from_date, input.to_date)
+        s = sales_summary(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -84,10 +84,10 @@ def health_margin(input: HealthMargin = None, **kwargs) -> str:
     Use it for: "am I profitable", "how healthy are my margins", "refund weight".
     DO NOT use it for product/channel margin detail.
     """
-    if input is None and kwargs:
+    if input is None:
         input = HealthMargin(**kwargs)
     try:
-        s = sales_summary(input.user_id, input.from_date, input.to_date)
+        s = sales_summary(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:

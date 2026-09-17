@@ -1,13 +1,18 @@
+import jwt from "jsonwebtoken";
+
 export async function chat(req, res) {
   const user_id = req.user.id;
   const { ask } = req.body;
 
   try {
     const chatbotUrl = process.env.CHATBOT_URL || "http://chatbot_service:8000";
+    const userToken = jwt.sign({ uid: user_id }, process.env.SECRET_KEY, {
+      expiresIn: "2m",
+    });
     const response = await fetch(`${chatbotUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ask, user_id }),
+      body: JSON.stringify({ ask, user_id, user_token: userToken }),
     });
 
     const data = await response.json();

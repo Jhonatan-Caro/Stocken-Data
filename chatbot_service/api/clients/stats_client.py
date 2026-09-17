@@ -2,6 +2,7 @@ import logging
 import httpx
 
 from api.config import Config
+from api.agent.context import get_current_user_token
 from api.models.stats import SummaryRow, ByProductRow, ByMonthRow, ByChannelRow, ByCategoryRow
 
 log = logging.getLogger(__name__)
@@ -22,8 +23,9 @@ _client = httpx.Client(
 def _get(path:str, user_id: int, date_from=None, date_to=None) -> list[dict]:
     params = {"userId": user_id, "from": date_from, "to": date_to}
     params = {k: v for k, v in params.items() if v is not None}
+    headers = {"x-user-token": get_current_user_token()}
     try:
-        r = _client.get(path, params=params)
+        r = _client.get(path, params=params, headers=headers)
     except httpx.RequestError as exc:
         log.warning("Stats backend inalcanzable: %s", exc)
         raise StatsUnavailable(str(exc)) from exc

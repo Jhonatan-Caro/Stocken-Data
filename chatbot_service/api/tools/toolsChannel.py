@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from api.clients.stats_client import sales_by_channel, StatsBadRequest, StatsUnavailable
+from api.agent.context import get_current_user_id
 from formatting import _money, _pct
 
 
 class ChannelRangeInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'. Omitir = sin límite.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
 
@@ -20,10 +20,10 @@ def sales_by_channel_tool(input: ChannelRangeInput = None, **kwargs) -> str:
     Use it for: "which channels sell the most", "sales by channel", "online vs store".
     DO NOT use it for product/category detail or temporal evolution.
     """
-    if input is None and kwargs:
+    if input is None:
         input = ChannelRangeInput(**kwargs)
     try:
-        rows = sales_by_channel(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_channel(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -45,10 +45,10 @@ def best_channel(input: ChannelRangeInput = None, **kwargs) -> str:
     Use it for: "my best channel", "where do I sell the most".
     DO NOT use it for the full breakdown (use sales by channel).
     """
-    if input is None and kwargs:
+    if input is None:
         input = ChannelRangeInput(**kwargs)
     try:
-        rows = sales_by_channel(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_channel(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -68,10 +68,10 @@ def top_margin_channel(input: ChannelRangeInput = None, **kwargs) -> str:
     Use it for: "which channel is most profitable", "best margin channel".
     DO NOT use it for volume ranking (use best channel).
     """
-    if input is None and kwargs:
+    if input is None:
         input = ChannelRangeInput(**kwargs)
     try:
-        rows = sales_by_channel(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_channel(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:

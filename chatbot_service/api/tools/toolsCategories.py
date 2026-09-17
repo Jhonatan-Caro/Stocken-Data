@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from api.clients.stats_client import sales_by_category, StatsBadRequest, StatsUnavailable
+from api.agent.context import get_current_user_id
 from formatting import _money, _pct
 
 
 class CategoryRangeInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'. Omitir = sin límite.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
 
@@ -24,10 +24,10 @@ def sales_by_category_tool(input: CategoryRangeInput = None, **kwargs) -> str:
     Use it for: "sales by category", "which category sells the most".
     DO NOT use it for product detail or temporal evolution.
     """
-    if input is None and kwargs:
+    if input is None:
         input = CategoryRangeInput(**kwargs)
     try:
-        rows = sales_by_category(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_category(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -49,10 +49,10 @@ def top_categories(input: TopCategoriesInput = None, **kwargs) -> str:
     Use it for: "my best categories", "top categories by revenue".
     DO NOT use it for product detail or temporal evolution.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopCategoriesInput(**kwargs)
     try:
-        rows = sales_by_category(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_category(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -75,10 +75,10 @@ def least_margin_categories(input: TopCategoriesInput = None, **kwargs) -> str:
     Use it for: "which categories are least profitable", "worst margin categories".
     DO NOT use it for volume ranking (use top categories).
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopCategoriesInput(**kwargs)
     try:
-        rows = sales_by_category(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_category(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:

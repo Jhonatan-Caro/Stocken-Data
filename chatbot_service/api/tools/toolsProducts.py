@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from api.clients.stats_client import sales_by_product, StatsBadRequest, StatsUnavailable
+from api.agent.context import get_current_user_id
 from formatting import _money, _pct
 
 
 class _ProductRankingInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'. Omitir = sin límite.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
     n: int = Field(5, ge=1, le=50, description="Número de productos a devolver.")
@@ -34,7 +34,6 @@ class TopLeastProductsMarginInput(_ProductRankingInput):
 
 
 class ProductsByPotentialInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
     classification: str = Field(
@@ -44,7 +43,6 @@ class ProductsByPotentialInput(BaseModel):
 
 
 class ProductDetailInput(BaseModel):
-    user_id: int = Field(..., description="ID del usuario dueño de los datos.")
     product_name: str = Field(..., description="Nombre (o parte) del producto a consultar.")
     from_date: Optional[str] = Field(None, description="Inicio del rango 'YYYY-MM' o 'YYYY-MM-DD'.")
     to_date: Optional[str] = Field(None, description="Fin del rango, inclusive.")
@@ -58,10 +56,10 @@ def top_selling_products(input: TopProductsInput = None, **kwargs) -> str:
     Use it for product rankings: "what sells the most", "my best products".
     DO NOT use it for temporal evolution (use the summary by month) or to check stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopProductsInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -84,10 +82,10 @@ def least_selling_products(input: TopLeastProductsInput = None, **kwargs) -> str
     Use it for product rankings: "what sells the least", "my worst products".
     DO NOT use it for temporal evolution (use the summary by month) or to check stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopLeastProductsInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -110,10 +108,10 @@ def top_billing_products(input: TopProductsBillingInput = None, **kwargs) -> str
     Use it for product rankings: "what bills the most", "my best products".
     DO NOT use it for temporal evolution (use the summary by month) or to check stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopProductsBillingInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -136,10 +134,10 @@ def top_margin_products(input: TopProductsMarginInput = None, **kwargs) -> str:
     Use it for product rankings: "what has the best margin", "my most profitable products".
     DO NOT use it for temporal evolution (use the summary by month) or to check stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopProductsMarginInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -162,10 +160,10 @@ def least_margin_products(input: TopLeastProductsMarginInput = None, **kwargs) -
     Use it for product rankings: "what has the worst margin", "my least profitable products".
     DO NOT use it for temporal evolution (use the summary by month) or to check stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = TopLeastProductsMarginInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -190,10 +188,10 @@ def products_by_potential(input: ProductsByPotentialInput = None, **kwargs) -> s
     push", "which ones sell a lot but leave no margin".
     DO NOT use it for plain rankings (use top/least selling) nor for stock.
     """
-    if input is None and kwargs:
+    if input is None:
         input = ProductsByPotentialInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:
@@ -219,10 +217,10 @@ def product_detail(input: ProductDetailInput = None, **kwargs) -> str:
     Use it when the user asks about a specific product: "how is <product> doing",
     "sales of <product>". DO NOT use it for rankings or overall summaries.
     """
-    if input is None and kwargs:
+    if input is None:
         input = ProductDetailInput(**kwargs)
     try:
-        rows = sales_by_product(input.user_id, input.from_date, input.to_date)
+        rows = sales_by_product(get_current_user_id(), input.from_date, input.to_date)
     except StatsBadRequest as e:
         return f"Parámetros inválidos: {e}"
     except StatsUnavailable:

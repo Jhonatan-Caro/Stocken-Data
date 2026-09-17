@@ -17,11 +17,12 @@ app.add_middleware(
 class Question(BaseModel):
     ask: str
     user_id: int
+    user_token: str
 
 @app.post("/chat")
 async def chat(question: Question):
     try:
-        response = consult_db(question.ask, question.user_id)
+        response = consult_db(question.ask, question.user_id, question.user_token)
         return {"respuesta": response}
     except Exception as e:
         print(f"Error al procesar la pregunta: {e}")

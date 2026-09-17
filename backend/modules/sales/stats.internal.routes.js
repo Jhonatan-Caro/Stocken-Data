@@ -1,17 +1,33 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import { verifyServiceToken } from '../../middleware/verifyServiceToken.js';
 import * as stats from './stats.service.js';
 import { parseDateRange } from './stats.controller.js';
 
 const router = express.Router();
 
+function resolveUserId(req) {
+  const raw = req.headers["x-user-token"];
+  if (!raw) {
+    throw { status: 401, message: "Falta la aserción de usuario" };
+  }
+  let payload;
+  try {
+    payload = jwt.verify(raw, process.env.SECRET_KEY);
+  } catch {
+    throw { status: 401, message: "Aserción de usuario inválida" };
+  }
+  const userId = Number(payload.uid);
+  if (!Number.isInteger(userId)) {
+    throw { status: 400, message: "userId inválido en la aserción" };
+  }
+  return userId;
+}
+
 function internalHandler(serviceFn, label) {
   return async (req, res) => {
     try {
-      const userId = Number(req.query.userId);
-      if (!Number.isInteger(userId)) {
-        return res.status(400).json({ message: "userId inválido" });
-      }
+      const userId = resolveUserId(req);
       const range = parseDateRange(req.query);
       return res.json(await serviceFn(userId, range));
     } catch (err) {
