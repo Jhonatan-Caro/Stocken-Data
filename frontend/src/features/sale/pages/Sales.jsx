@@ -24,6 +24,12 @@ const SALES_FIELDS = [
   { key: "channel", label: "Canal de venta", required: false },
   { key: "warehouse", label: "Almacén", required: false },
   { key: "order_ref", label: "Nº de pedido", required: false },
+  {
+    key: "line_ref",
+    label: "ID línea",
+    required: false,
+    aliases: ["id linea", "linea", "line id", "nº línea", "num linea"],
+  },
 ];
 
 const ORDER_FIELDS = [

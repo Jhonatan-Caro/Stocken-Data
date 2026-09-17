@@ -27,15 +27,25 @@ function assertData(data) {
 async function resolveProduct(client, userId, sku, warehouse) {
   if (warehouse) {
     const { rows } = await client.query(
-      `SELECT id, stock FROM products
+      `SELECT id FROM products
        WHERE user_id = $1 AND sku = $2 AND warehouse = $3`,
       [userId, sku, warehouse],
     );
-    if (rows.length > 0) return rows[0];
+    if (rows.length === 0) {
+      throw {
+        message: `SKU "${sku}" no existe en el almacén "${warehouse}"`,
+      };
+    }
+    if (rows.length > 1) {
+      throw {
+        message: `SKU "${sku}" existe en varias ubicaciones del almacén "${warehouse}": no se puede desambiguar`,
+      };
+    }
+    return rows[0];
   }
 
   const { rows } = await client.query(
-    `SELECT id, stock FROM products
+    `SELECT id FROM products
      WHERE user_id = $1 AND sku = $2`,
     [userId, sku],
   );
@@ -251,6 +261,7 @@ export async function bulkInsertSales(
 
         const channel = fileRow[mapping.channel]?.toString().trim() || null;
         const warehouse = fileRow[mapping.warehouse]?.toString().trim() || null;
+        const lineRef = fileRow[mapping.line_ref]?.toString().trim() || null;
 
         const unitPrice = round2(parseNumber(fileRow[mapping.unit_price]));
         const discount = round2(parseNumber(fileRow[mapping.discount]));
@@ -286,22 +297,49 @@ export async function bulkInsertSales(
           }
         }
 
+        let existing = null;
+        if (lineRef) {
+          const { rows: existingRows } = await client.query(
+            `SELECT id, quantity, product_id FROM sales
+             WHERE user_id = $1 AND line_ref = $2`,
+            [userId, lineRef],
+          );
+          existing = existingRows[0] ?? null;
+        }
+
         const data = { ...fileRow };
 
         const { rows: saleRows } = await client.query(
           `INSERT INTO sales (
-             user_id, product_id, import_id, order_id, source,
+             user_id, product_id, import_id, order_id, line_ref, source,
              quantity, total, unit_price, discount, tax_rate,
              cost, margin, channel, warehouse, sold_at, data
            )
-           VALUES ($1, $2, $3, $4, $5,
-                   $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+           VALUES ($1, $2, $3, $4, $5, $6,
+                   $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+           ON CONFLICT (user_id, line_ref) WHERE line_ref IS NOT NULL DO UPDATE SET
+             product_id = EXCLUDED.product_id,
+             import_id  = EXCLUDED.import_id,
+             order_id   = EXCLUDED.order_id,
+             source     = EXCLUDED.source,
+             quantity   = EXCLUDED.quantity,
+             total      = EXCLUDED.total,
+             unit_price = EXCLUDED.unit_price,
+             discount   = EXCLUDED.discount,
+             tax_rate   = EXCLUDED.tax_rate,
+             cost       = EXCLUDED.cost,
+             margin     = EXCLUDED.margin,
+             channel    = EXCLUDED.channel,
+             warehouse  = EXCLUDED.warehouse,
+             sold_at    = EXCLUDED.sold_at,
+             data       = EXCLUDED.data
            RETURNING id, product_id, order_id, quantity, total, margin, sold_at`,
           [
             userId,
             product.id,
             importId,
             orderId,
+            lineRef,
             source,
             quantity,
             round2(total),
@@ -319,60 +357,82 @@ export async function bulkInsertSales(
         const sale = saleRows[0];
 
         if (adjustStock) {
-          // [MODIFICADO — FIX] Descuento ATÓMICO en la BD, en una sola
-          // sentencia que hace tres cosas a la vez:
-          //
-          //   1. stock = stock - $1  -> resta RELATIVA sobre el valor
-          //      real en la BD en ese instante. Antes se escribía un
-          //      valor absoluto calculado en JS (stock = copia - qty):
-          //      si dos claves de caché apuntaban al mismo producto
-          //      (mismo SKU visto con almacenes distintos), cada copia
-          //      descontaba solo SUS líneas y pisaba las del resto.
-          //      Con la resta relativa da igual la forma del archivo:
-          //      catálogo SKU×almacén, un almacén por SKU, o mixto.
-          //
-          //   2. AND stock >= $1     -> la validación de stock
-          //      insuficiente viaja DENTRO del UPDATE: o hay stock y
-          //      se descuenta, o no afecta filas. Sin hueco entre
-          //      "comprobar" y "descontar" (a prueba de carreras).
-          //
-          //   3. RETURNING stock     -> el stock REAL tras la resta,
-          //      calculado por Postgres. Es el stock_after verdadero
-          //      para el movimiento de inventario (antes se apuntaba
-          //      el de la copia JS, y la cadena de movimientos quedaba
-          //      incoherente).
-          const { rows: stockRows } = await client.query(
-            `UPDATE products SET stock = stock - $1
-             WHERE id = $2 AND stock >= $1
-             RETURNING stock`,
-            [quantity, product.id],
-          );
-
-          if (stockRows.length === 0) {
-            // 0 filas afectadas = no había stock suficiente. Solo aquí
-            // (ruta de error, poco frecuente) se consulta el stock real
-            // para dar un mensaje útil.
-            const { rows: cur } = await client.query(
-              `SELECT stock FROM products WHERE id = $1`,
-              [product.id],
+          if (!existing) {
+            const { rows: stockRows } = await client.query(
+              `UPDATE products SET stock = stock - $1
+               WHERE id = $2 AND stock >= $1
+               RETURNING stock`,
+              [quantity, product.id],
             );
-            throw {
-              message: `Stock insuficiente para "${sku}": disponible ${cur[0]?.stock ?? 0}, solicitado ${quantity}`,
-            };
+            if (stockRows.length === 0) {
+              const { rows: cur } = await client.query(
+                `SELECT stock FROM products WHERE id = $1`,
+                [product.id],
+              );
+              throw {
+                message: `Stock insuficiente para "${sku}": disponible ${cur[0]?.stock ?? 0}, solicitado ${quantity}`,
+              };
+            }
+            await client.query(
+              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, 'sale', $4, $5)`,
+              [userId, product.id, sale.id, -quantity, stockRows[0].stock],
+            );
+          } else if (existing.product_id === product.id) {
+            const deltaQty = quantity - existing.quantity;
+            if (deltaQty !== 0) {
+              const { rows: stockRows } = await client.query(
+                `UPDATE products SET stock = stock - $1
+                 WHERE id = $2 AND stock >= GREATEST($1, 0)
+                 RETURNING stock`,
+                [deltaQty, product.id],
+              );
+              if (stockRows.length === 0) {
+                const { rows: cur } = await client.query(
+                  `SELECT stock FROM products WHERE id = $1`,
+                  [product.id],
+                );
+                throw {
+                  message: `Stock insuficiente para "${sku}": disponible ${cur[0]?.stock ?? 0}, ajuste solicitado ${deltaQty}`,
+                };
+              }
+              await client.query(
+                `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
+                 VALUES ($1, $2, $3, 'adjustment', $4, $5)`,
+                [userId, product.id, sale.id, -deltaQty, stockRows[0].stock],
+              );
+            }
+          } else {
+            const { rows: backRows } = await client.query(
+              `UPDATE products SET stock = stock + $1 WHERE id = $2 RETURNING stock`,
+              [existing.quantity, existing.product_id],
+            );
+            await client.query(
+              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, 'adjustment', $4, $5)`,
+              [userId, existing.product_id, sale.id, existing.quantity, backRows[0]?.stock ?? 0],
+            );
+            const { rows: stockRows } = await client.query(
+              `UPDATE products SET stock = stock - $1
+               WHERE id = $2 AND stock >= $1
+               RETURNING stock`,
+              [quantity, product.id],
+            );
+            if (stockRows.length === 0) {
+              const { rows: cur } = await client.query(
+                `SELECT stock FROM products WHERE id = $1`,
+                [product.id],
+              );
+              throw {
+                message: `Stock insuficiente para "${sku}": disponible ${cur[0]?.stock ?? 0}, solicitado ${quantity}`,
+              };
+            }
+            await client.query(
+              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, 'sale', $4, $5)`,
+              [userId, product.id, sale.id, -quantity, stockRows[0].stock],
+            );
           }
-
-          const stockAfter = stockRows[0].stock;
-
-          await client.query(
-            `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
-             VALUES ($1, $2, $3, 'sale', $4, $5)`,
-            [userId, product.id, sale.id, -quantity, stockAfter],
-          );
-          // (Ya no existe `product.stock = stockAfter`: la copia en
-          // memoria no lleva contadores, la única verdad es la BD.
-          // Esto también elimina un bug latente: si una fila fallaba
-          // tras mutar la copia, el ROLLBACK TO SAVEPOINT deshacía la
-          // BD pero no la copia, que quedaba desfasada para siempre.)
         }
 
         insertedSales.push(sale);
