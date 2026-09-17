@@ -3,11 +3,17 @@ import * as statsService from "./stats.service.js";
 export function parseDateRange(query) {
   const range = { from: null, to: null };
 
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+
   for (const key of ["from", "to"]) {
     if (query[key]) {
-      const date = new Date(query[key]);
+      const value = query[key];
+      const date = new Date(value);
       if (isNaN(date.getTime())) {
-        throw { status: 400, message: `Fecha "${key}" inválida: ${query[key]}` };
+        throw { status: 400, message: `Fecha "${key}" inválida: ${value}` };
+      }
+      if (key === "to" && dateOnly.test(value)) {
+        date.setUTCHours(23, 59, 59, 999);
       }
       range[key] = date;
     }
