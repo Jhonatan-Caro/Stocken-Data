@@ -295,19 +295,14 @@ export async function bulkInsertProducts(
       { sku, warehouse, location, stock, data, categoryName, row, rowCount },
     ] of byKey) {
       try {
-        //   Resolver la categoría de este producto:
-        //   con nombre  -> buscar o crear (cacheado)
-        //   sin nombre  -> la categoría manual (o NULL si no la hay)
+        await client.query("SAVEPOINT import_row");
+
         let productCategoryId = defaultCategoryId;
+        const cacheKey = categoryName ? categoryName.toLowerCase() : null;
         if (categoryName) {
-          const cacheKey = categoryName.toLowerCase();
-          if (!categoryCache.has(cacheKey)) {
-            categoryCache.set(
-              cacheKey,
-              await getOrCreateByName(client, userId, categoryName),
-            );
-          }
-          productCategoryId = categoryCache.get(cacheKey);
+          productCategoryId = categoryCache.has(cacheKey)
+            ? categoryCache.get(cacheKey)
+            : await getOrCreateByName(client, userId, categoryName);
         }
 
         const { rows } = await client.query(
@@ -317,18 +312,17 @@ export async function bulkInsertProducts(
            DO UPDATE SET
              ${stockUpdate}
              data        = products.data || EXCLUDED.data,
-             -- [MODIFICADO] COALESCE: si este import trae categoría
-             -- (EXCLUDED) se actualiza; si la fila venía sin categoría
-             -- (NULL), se CONSERVA la que el producto ya tenía en vez
-             -- de pisarla con NULL
              category_id = COALESCE(EXCLUDED.category_id, products.category_id)
            RETURNING id, user_id, category_id, sku, warehouse, location, stock, data, created_at`,
           [userId, productCategoryId, sku, warehouse, location, stock, data],
         );
 
+        if (categoryName) categoryCache.set(cacheKey, productCategoryId);
+
         insertedRows.push(rows[0]);
         rowsOk += rowCount;
       } catch (rowErr) {
+        await client.query("ROLLBACK TO SAVEPOINT import_row");
         rowsFailed += rowCount;
         errors.push({ row, error: rowErr.message });
       }
