@@ -25,7 +25,7 @@ export async function getCSVColumns(req, res) {
 }
 
 export async function uploadCSV(req, res) {
-  const userId = req.user.id;
+  const ctx = { tenantId: req.user.tenant_id, userId: req.user.id };
   const categoryId = req.body.categoryId ?? req.body.category_id;
 
   if (!req.file) {
@@ -54,7 +54,7 @@ export async function uploadCSV(req, res) {
     const workbook = await parseUploadedFile(req.file);
     const rows = getSheetRows(workbook, req.body.sheet);
     const result = await bulkInsertProducts(
-      userId,
+      ctx,
       categoryId,
       rows,
       mapping,

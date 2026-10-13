@@ -24,12 +24,12 @@ function assertData(data) {
   return data;
 }
 
-async function resolveProduct(client, userId, sku, warehouse) {
+async function resolveProduct(client, tenantId, sku, warehouse) {
   if (warehouse) {
     const { rows } = await client.query(
       `SELECT id FROM products
-       WHERE user_id = $1 AND sku = $2 AND warehouse = $3`,
-      [userId, sku, warehouse],
+       WHERE tenant_id = $1 AND sku = $2 AND warehouse = $3`,
+      [tenantId, sku, warehouse],
     );
     if (rows.length === 0) {
       throw {
@@ -46,8 +46,8 @@ async function resolveProduct(client, userId, sku, warehouse) {
 
   const { rows } = await client.query(
     `SELECT id FROM products
-     WHERE user_id = $1 AND sku = $2`,
-    [userId, sku],
+     WHERE tenant_id = $1 AND sku = $2`,
+    [tenantId, sku],
   );
 
   if (rows.length === 0) {
@@ -63,7 +63,7 @@ async function resolveProduct(client, userId, sku, warehouse) {
   return rows[0];
 }
 
-export async function bulkInsertOrders(userId, fileRows, mapping, filename) {
+export async function bulkInsertOrders(ctx, fileRows, mapping, filename) {
   if (!Array.isArray(fileRows) || fileRows.length === 0) {
     throw { status: 400, message: "El archivo no contiene filas válidas" };
   }
@@ -84,10 +84,10 @@ export async function bulkInsertOrders(userId, fileRows, mapping, filename) {
 
     const source = (filename?.trim() || "orders_import").slice(0, 64);
     const { rows: importRows } = await client.query(
-      `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
-       VALUES ($1, $2, $3, 0, 0)
+      `INSERT INTO imports (tenant_id, user_id, filename, source, rows_ok, rows_failed)
+       VALUES ($1, $2, $3, $4, 0, 0)
        RETURNING id`,
-      [userId, filename ?? null, source],
+      [ctx.tenantId, ctx.userId, filename ?? null, source],
     );
     const importId = importRows[0].id;
 
@@ -128,16 +128,16 @@ export async function bulkInsertOrders(userId, fileRows, mapping, filename) {
 
         await client.query(
           `INSERT INTO sale_orders (
-             user_id, import_id, order_ref, sold_at,
+             tenant_id, user_id, import_id, order_ref, sold_at,
              channel, customer_code, payment_status,
              shipping_total, discount_total, tax_total,
              total, refunded, cost_total, margin_total, data
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7,
-                   COALESCE($8::numeric, 0), COALESCE($9::numeric, 0),
-                   COALESCE($10::numeric, 0),
-                   $11, COALESCE($12::numeric, 0), $13, $14, $15)
-           ON CONFLICT (user_id, order_ref) DO UPDATE SET
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+                   COALESCE($9::numeric, 0), COALESCE($10::numeric, 0),
+                   COALESCE($11::numeric, 0),
+                   $12, COALESCE($13::numeric, 0), $14, $15, $16)
+           ON CONFLICT (tenant_id, order_ref) DO UPDATE SET
              import_id      = EXCLUDED.import_id,
              sold_at        = EXCLUDED.sold_at,
              channel        = EXCLUDED.channel,
@@ -152,7 +152,8 @@ export async function bulkInsertOrders(userId, fileRows, mapping, filename) {
              margin_total   = EXCLUDED.margin_total,
              data           = EXCLUDED.data`,
           [
-            userId,
+            ctx.tenantId,
+            ctx.userId,
             importId,
             orderRef,
             soldAt,
@@ -195,7 +196,7 @@ export async function bulkInsertOrders(userId, fileRows, mapping, filename) {
 }
 
 export async function bulkInsertSales(
-  userId,
+  ctx,
   fileRows,
   mapping,
   filename,
@@ -223,10 +224,10 @@ export async function bulkInsertSales(
 
     const source = (filename?.trim() || "csv_sales").slice(0, 64);
     const { rows: importRows } = await client.query(
-      `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
-       VALUES ($1, $2, $3, 0, 0)
+      `INSERT INTO imports (tenant_id, user_id, filename, source, rows_ok, rows_failed)
+       VALUES ($1, $2, $3, $4, 0, 0)
        RETURNING id`,
-      [userId, filename ?? null, source],
+      [ctx.tenantId, ctx.userId, filename ?? null, source],
     );
     const importId = importRows[0].id;
 
@@ -277,7 +278,7 @@ export async function bulkInsertSales(
         const productKey = `${sku}|${warehouse ?? ""}`;
         let product = productCache.get(productKey);
         if (!product) {
-          product = await resolveProduct(client, userId, sku, warehouse);
+          product = await resolveProduct(client, ctx.tenantId, sku, warehouse);
           productCache.set(productKey, product);
         }
 
@@ -289,8 +290,8 @@ export async function bulkInsertSales(
           } else {
             const { rows: orderRows } = await client.query(
               `SELECT id FROM sale_orders
-               WHERE user_id = $1 AND order_ref = $2`,
-              [userId, orderRef],
+               WHERE tenant_id = $1 AND order_ref = $2`,
+              [ctx.tenantId, orderRef],
             );
             orderId = orderRows[0]?.id ?? null;
             orderCache.set(orderRef, orderId);
@@ -301,8 +302,8 @@ export async function bulkInsertSales(
         if (lineRef) {
           const { rows: existingRows } = await client.query(
             `SELECT id, quantity, product_id FROM sales
-             WHERE user_id = $1 AND line_ref = $2`,
-            [userId, lineRef],
+             WHERE tenant_id = $1 AND line_ref = $2`,
+            [ctx.tenantId, lineRef],
           );
           existing = existingRows[0] ?? null;
         }
@@ -311,13 +312,13 @@ export async function bulkInsertSales(
 
         const { rows: saleRows } = await client.query(
           `INSERT INTO sales (
-             user_id, product_id, import_id, order_id, line_ref, source,
+             tenant_id, user_id, product_id, import_id, order_id, line_ref, source,
              quantity, total, unit_price, discount, tax_rate,
              cost, margin, channel, warehouse, sold_at, data
            )
-           VALUES ($1, $2, $3, $4, $5, $6,
-                   $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-           ON CONFLICT (user_id, line_ref) WHERE line_ref IS NOT NULL DO UPDATE SET
+           VALUES ($1, $2, $3, $4, $5, $6, $7,
+                   $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+           ON CONFLICT (tenant_id, line_ref) WHERE line_ref IS NOT NULL DO UPDATE SET
              product_id = EXCLUDED.product_id,
              import_id  = EXCLUDED.import_id,
              order_id   = EXCLUDED.order_id,
@@ -335,7 +336,8 @@ export async function bulkInsertSales(
              data       = EXCLUDED.data
            RETURNING id, product_id, order_id, quantity, total, margin, sold_at`,
           [
-            userId,
+            ctx.tenantId,
+            ctx.userId,
             product.id,
             importId,
             orderId,
@@ -374,9 +376,9 @@ export async function bulkInsertSales(
               };
             }
             await client.query(
-              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
-               VALUES ($1, $2, $3, 'sale', $4, $5)`,
-              [userId, product.id, sale.id, -quantity, stockRows[0].stock],
+              `INSERT INTO inventory_movements (tenant_id, user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, $4, 'sale', $5, $6)`,
+              [ctx.tenantId, ctx.userId, product.id, sale.id, -quantity, stockRows[0].stock],
             );
           } else if (existing.product_id === product.id) {
             const deltaQty = quantity - existing.quantity;
@@ -397,9 +399,9 @@ export async function bulkInsertSales(
                 };
               }
               await client.query(
-                `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
-                 VALUES ($1, $2, $3, 'adjustment', $4, $5)`,
-                [userId, product.id, sale.id, -deltaQty, stockRows[0].stock],
+                `INSERT INTO inventory_movements (tenant_id, user_id, product_id, sale_id, type, delta, stock_after)
+                 VALUES ($1, $2, $3, $4, 'adjustment', $5, $6)`,
+                [ctx.tenantId, ctx.userId, product.id, sale.id, -deltaQty, stockRows[0].stock],
               );
             }
           } else {
@@ -408,9 +410,9 @@ export async function bulkInsertSales(
               [existing.quantity, existing.product_id],
             );
             await client.query(
-              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
-               VALUES ($1, $2, $3, 'adjustment', $4, $5)`,
-              [userId, existing.product_id, sale.id, existing.quantity, backRows[0]?.stock ?? 0],
+              `INSERT INTO inventory_movements (tenant_id, user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, $4, 'adjustment', $5, $6)`,
+              [ctx.tenantId, ctx.userId, existing.product_id, sale.id, existing.quantity, backRows[0]?.stock ?? 0],
             );
             const { rows: stockRows } = await client.query(
               `UPDATE products SET stock = stock - $1
@@ -428,9 +430,9 @@ export async function bulkInsertSales(
               };
             }
             await client.query(
-              `INSERT INTO inventory_movements (user_id, product_id, sale_id, type, delta, stock_after)
-               VALUES ($1, $2, $3, 'sale', $4, $5)`,
-              [userId, product.id, sale.id, -quantity, stockRows[0].stock],
+              `INSERT INTO inventory_movements (tenant_id, user_id, product_id, sale_id, type, delta, stock_after)
+               VALUES ($1, $2, $3, $4, 'sale', $5, $6)`,
+              [ctx.tenantId, ctx.userId, product.id, sale.id, -quantity, stockRows[0].stock],
             );
           }
         }
@@ -461,7 +463,7 @@ export async function bulkInsertSales(
 }
 
 export async function getAll(
-  userId,
+  ctx,
   { limit = 50, offset = 0, search = "", date = "" } = {},
 ) {
 
@@ -469,8 +471,8 @@ export async function getAll(
                      p.data->>'name', p.data->>'descripcion')`;
 
 
-  const conditions = ["s.user_id = $1"];
-  const params = [userId];
+  const conditions = ["s.tenant_id = $1"];
+  const params = [ctx.tenantId];
 
   if (search) {
     params.push(`%${search}%`);
@@ -515,13 +517,13 @@ export async function getAll(
   return { rows, total };
 }
 
-export async function getSaleDates(userId) {
+export async function getSaleDates(ctx) {
   const { rows } = await pool.query(
     `SELECT DISTINCT to_char(s.sold_at, 'YYYY-MM-DD') AS date
        FROM sales s
-      WHERE s.user_id = $1 AND s.sold_at IS NOT NULL
+      WHERE s.tenant_id = $1 AND s.sold_at IS NOT NULL
       ORDER BY date DESC`,
-    [userId],
+    [ctx.tenantId],
   );
   return rows.map((r) => r.date);
 }

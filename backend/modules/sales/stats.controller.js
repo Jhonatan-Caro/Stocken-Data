@@ -26,7 +26,7 @@ function handlerFor(serviceFn, label) {
   return async function (req, res) {
     try {
       const range = parseDateRange(req.query);
-      const result = await serviceFn(req.user.id, range);
+      const result = await serviceFn({ tenantId: req.user.tenant_id }, range);
       return res.json(result);
     } catch (err) {
       console.error(`Error en stats/${label}:`, err);

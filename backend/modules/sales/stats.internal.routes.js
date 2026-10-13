@@ -6,7 +6,7 @@ import { parseDateRange } from './stats.controller.js';
 
 const router = express.Router();
 
-function resolveUserId(req) {
+function resolveTenantId(req) {
   const raw = req.headers["x-user-token"];
   if (!raw) {
     throw { status: 401, message: "Falta la aserción de usuario" };
@@ -17,19 +17,19 @@ function resolveUserId(req) {
   } catch {
     throw { status: 401, message: "Aserción de usuario inválida" };
   }
-  const userId = Number(payload.uid);
-  if (!Number.isInteger(userId)) {
-    throw { status: 400, message: "userId inválido en la aserción" };
+  const tenantId = Number(payload.tid);
+  if (!Number.isInteger(tenantId)) {
+    throw { status: 400, message: "tenant_id inválido en la aserción" };
   }
-  return userId;
+  return tenantId;
 }
 
 function internalHandler(serviceFn, label) {
   return async (req, res) => {
     try {
-      const userId = resolveUserId(req);
+      const tenantId = resolveTenantId(req);
       const range = parseDateRange(req.query);
-      return res.json(await serviceFn(userId, range));
+      return res.json(await serviceFn({ tenantId }, range));
     } catch (err) {
       console.error(`Error en internal/stats/${label}:`, err);
       return res.status(err.status || 500).json({ message: err.message || "Error interno" });

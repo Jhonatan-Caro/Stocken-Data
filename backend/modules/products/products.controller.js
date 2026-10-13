@@ -1,8 +1,13 @@
 import * as productsService from "./products.service.js";
 
+// tenantId aísla los datos; userId queda como "creado/modificado por".
+function ctxFrom(req) {
+  return { tenantId: req.user.tenant_id, userId: req.user.id };
+}
+
 export async function getProducts(req, res) {
   try {
-    const rows = await productsService.getAll(req.user.id);
+    const rows = await productsService.getAll(ctxFrom(req));
     res.json(rows);
   } catch (err) {
     res
@@ -13,7 +18,7 @@ export async function getProducts(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const product = await productsService.create(req.user.id, req.body);
+    const product = await productsService.create(ctxFrom(req), req.body);
     res.status(201).json(product);
   } catch (err) {
     res
@@ -26,7 +31,7 @@ export async function updateProduct(req, res) {
   try {
     const product = await productsService.update(
       req.params.id,
-      req.user.id,
+      ctxFrom(req),
       req.body,
     );
     res.json(product);
@@ -39,7 +44,7 @@ export async function updateProduct(req, res) {
 
 export async function deleteProduct(req, res) {
   try {
-    await productsService.remove(req.params.id, req.user.id);
+    await productsService.remove(req.params.id, ctxFrom(req));
     res.sendStatus(204);
   } catch (err) {
     res

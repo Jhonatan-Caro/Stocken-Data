@@ -2,11 +2,16 @@ import jwt from "jsonwebtoken";
 
 export async function chat(req, res) {
   const user_id = req.user.id;
+  const tenant_id = req.user.tenant_id;
   const { ask } = req.body;
 
   try {
     const chatbotUrl = process.env.CHATBOT_URL || "http://chatbot_service:8000";
-    const userToken = jwt.sign({ uid: user_id }, process.env.SECRET_KEY, {
+    // El aislamiento viaja en el token firmado (tid = tenant_id), que el
+    // chatbot_service reenvía tal cual como x-user-token. user_id sigue en el
+    // body solo para satisfacer el contrato del servicio Python (es decorativo:
+    // el backend interno resuelve el tenant desde el token, no del body).
+    const userToken = jwt.sign({ tid: tenant_id }, process.env.SECRET_KEY, {
       expiresIn: "2m",
     });
     const response = await fetch(`${chatbotUrl}/chat`, {

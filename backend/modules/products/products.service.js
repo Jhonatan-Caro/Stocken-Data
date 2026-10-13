@@ -27,34 +27,32 @@ function assertData(data) {
   return data;
 }
 
-async function assertCategoryBelongsToUser(client, categoryId, userId) {
+async function assertCategoryBelongsToTenant(client, categoryId, tenantId) {
   const { rowCount } = await client.query(
-    "SELECT 1 FROM dynamic_categories WHERE id = $1 AND user_id = $2",
-    [categoryId, userId],
+    "SELECT 1 FROM dynamic_categories WHERE id = $1 AND tenant_id = $2",
+    [categoryId, tenantId],
   );
   if (rowCount === 0) {
-    throw { status: 404, message: "Categoria no encontrada para el usuario" };
+    throw { status: 404, message: "Categoria no encontrada para el tenant" };
   }
 }
 
-export async function getAll(userId) {
+export async function getAll(ctx) {
   const { rows } = await pool.query(
     `SELECT p.id, p.user_id, p.category_id, p.sku, p.warehouse, p.location,
             p.stock, p.data, p.created_at,
             c.name AS category_name
      FROM products p
      LEFT JOIN dynamic_categories c ON c.id = p.category_id
-     WHERE p.user_id = $1
+     WHERE p.tenant_id = $1
      ORDER BY p.created_at DESC`,
-    [userId],
+    [ctx.tenantId],
   );
   return rows;
 }
 
-export async function create(userId, body) {
-  console.log("body recibido:", JSON.stringify(body));
+export async function create(ctx, body) {
   const clean = sanitizePayload(body);
-  console.log("clean después de sanitize:", JSON.stringify(clean));
   const categoryId = assertCategoryId(clean.category_id);
   const data = assertData(clean.data);
   const sku = clean.sku?.toString().trim();
@@ -62,13 +60,13 @@ export async function create(userId, body) {
 
   const client = await pool.connect();
   try {
-    await assertCategoryBelongsToUser(client, categoryId, userId);
+    await assertCategoryBelongsToTenant(client, categoryId, ctx.tenantId);
 
     const { rows } = await client.query(
-      `INSERT INTO products (user_id, category_id, sku, stock, data)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO products (tenant_id, user_id, category_id, sku, stock, data)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, user_id, category_id, sku, stock, data, created_at`,
-      [userId, categoryId, sku, stock, data],
+      [ctx.tenantId, ctx.userId, categoryId, sku, stock, data],
     );
     return rows[0];
   } finally {
@@ -76,7 +74,7 @@ export async function create(userId, body) {
   }
 }
 
-export async function update(productId, userId, body) {
+export async function update(productId, ctx, body) {
   const clean = sanitizePayload(body);
   if (!("category_id" in clean) && !("data" in clean)) {
     throw {
@@ -93,7 +91,7 @@ export async function update(productId, userId, body) {
 
     if ("category_id" in clean) {
       const categoryId = assertCategoryId(clean.category_id);
-      await assertCategoryBelongsToUser(client, categoryId, userId);
+      await assertCategoryBelongsToTenant(client, categoryId, ctx.tenantId);
       fields.push(`category_id = $${idx++}`);
       values.push(categoryId);
     }
@@ -104,12 +102,12 @@ export async function update(productId, userId, body) {
       values.push(data);
     }
 
-    values.push(productId, userId);
+    values.push(productId, ctx.tenantId);
 
     const { rows, rowCount } = await client.query(
       `UPDATE products
        SET ${fields.join(", ")}
-       WHERE id = $${idx++} AND user_id = $${idx}
+       WHERE id = $${idx++} AND tenant_id = $${idx}
        RETURNING id, user_id, category_id, data, created_at`,
       values,
     );
@@ -117,7 +115,7 @@ export async function update(productId, userId, body) {
     if (rowCount === 0) {
       throw {
         status: 404,
-        message: "Producto no encontrado o no pertenece al usuario",
+        message: "Producto no encontrado o no pertenece al tenant",
       };
     }
     return rows[0];
@@ -126,21 +124,21 @@ export async function update(productId, userId, body) {
   }
 }
 
-export async function remove(productId, userId) {
+export async function remove(productId, ctx) {
   const { rowCount } = await pool.query(
-    "DELETE FROM products WHERE id = $1 AND user_id = $2",
-    [productId, userId],
+    "DELETE FROM products WHERE id = $1 AND tenant_id = $2",
+    [productId, ctx.tenantId],
   );
   if (rowCount === 0) {
     throw {
       status: 404,
-      message: "Producto no encontrado o no pertenece al usuario",
+      message: "Producto no encontrado o no pertenece al tenant",
     };
   }
 }
 
 export async function bulkInsertProducts(
-  userId,
+  ctx,
   categoryId,
   fileRows,
   mapping,
@@ -205,15 +203,15 @@ export async function bulkInsertProducts(
   try {
     await client.query("BEGIN");
     if (defaultCategoryId !== null) {
-      await assertCategoryBelongsToUser(client, defaultCategoryId, userId);
+      await assertCategoryBelongsToTenant(client, defaultCategoryId, ctx.tenantId);
     }
 
     const source = (filename?.trim() || "csv_products").slice(0, 64);
     const importResult = await client.query(
-      `INSERT INTO imports (user_id, filename, source, rows_ok, rows_failed)
-       VALUES ($1, $2, $3, 0, 0)
+      `INSERT INTO imports (tenant_id, user_id, filename, source, rows_ok, rows_failed)
+       VALUES ($1, $2, $3, $4, 0, 0)
        RETURNING id`,
-      [userId, filename ?? null, source],
+      [ctx.tenantId, ctx.userId, filename ?? null, source],
     );
     const importId = importResult.rows[0].id;
 
@@ -302,19 +300,19 @@ export async function bulkInsertProducts(
         if (categoryName) {
           productCategoryId = categoryCache.has(cacheKey)
             ? categoryCache.get(cacheKey)
-            : await getOrCreateByName(client, userId, categoryName);
+            : await getOrCreateByName(client, ctx, categoryName);
         }
 
         const { rows } = await client.query(
-          `INSERT INTO products (user_id, category_id, sku, warehouse, location, stock, data)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `INSERT INTO products (tenant_id, user_id, category_id, sku, warehouse, location, stock, data)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            ON CONFLICT ON CONSTRAINT uq_product_identity
            DO UPDATE SET
              ${stockUpdate}
              data        = products.data || EXCLUDED.data,
              category_id = COALESCE(EXCLUDED.category_id, products.category_id)
            RETURNING id, user_id, category_id, sku, warehouse, location, stock, data, created_at`,
-          [userId, productCategoryId, sku, warehouse, location, stock, data],
+          [ctx.tenantId, ctx.userId, productCategoryId, sku, warehouse, location, stock, data],
         );
 
         if (categoryName) categoryCache.set(cacheKey, productCategoryId);

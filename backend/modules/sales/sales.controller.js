@@ -28,7 +28,7 @@ function parseMapping(body) {
 }
 
 export async function uploadSalesCSV(req, res) {
-  const userId = req.user.id;
+  const ctx = { tenantId: req.user.tenant_id, userId: req.user.id };
 
   if (!req.file) {
     return res.status(400).json({ message: "No se ha subido ningún archivo" });
@@ -55,7 +55,7 @@ export async function uploadSalesCSV(req, res) {
     const workbook = await parseUploadedFile(req.file);
     const rows = getSheetRows(workbook, req.body.sheet);
     const result = await salesService.bulkInsertSales(
-      userId,
+      ctx,
       rows,
       mapping,
       req.file.originalname,
@@ -76,7 +76,7 @@ export async function uploadSalesCSV(req, res) {
 }
 
 export async function uploadSalesOrders(req, res) {
-  const userId = req.user.id;
+  const ctx = { tenantId: req.user.tenant_id, userId: req.user.id };
 
   if (!req.file) {
     return res.status(400).json({ message: "No se ha subido ningún archivo" });
@@ -101,7 +101,7 @@ export async function uploadSalesOrders(req, res) {
     const workbook = await parseUploadedFile(req.file);
     const rows = getSheetRows(workbook, req.body.sheet);
     const result = await salesService.bulkInsertOrders(
-      userId,
+      ctx,
       rows,
       mapping,
       req.file.originalname,
@@ -129,14 +129,15 @@ export async function getSales(req, res) {
     const search = (req.query.search || "").toString().trim();
     const date = (req.query.date || "").toString().trim();
 
-    const { rows, total } = await salesService.getAll(req.user.id, {
+    const ctx = { tenantId: req.user.tenant_id, userId: req.user.id };
+    const { rows, total } = await salesService.getAll(ctx, {
       limit,
       offset,
       search,
       date,
     });
 
-    const dates = await salesService.getSaleDates(req.user.id);
+    const dates = await salesService.getSaleDates(ctx);
 
     return res.json({ rows, total, limit, offset, dates });
   } catch (err) {

@@ -1,6 +1,6 @@
 import pool from "../../config/db.js";
 
-export async function getSummary(userId, { from = null, to = null } = {}) {
+export async function getSummary(ctx, { from = null, to = null } = {}) {
   const { rows: lineRows } = await pool.query(
     `SELECT
        COUNT(*)::int                                        AS lines,
@@ -11,10 +11,10 @@ export async function getSummary(userId, { from = null, to = null } = {}) {
        COALESCE(SUM(s.cost), 0)::float                      AS cost,
        COALESCE(SUM(s.margin), 0)::float                    AS margin
      FROM sales s
-     WHERE s.user_id = $1
+     WHERE s.tenant_id = $1
        AND ($2::timestamp IS NULL OR s.sold_at >= $2)
        AND ($3::timestamp IS NULL OR s.sold_at <= $3)`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
 
   const { rows: orderRows } = await pool.query(
@@ -25,10 +25,10 @@ export async function getSummary(userId, { from = null, to = null } = {}) {
        COALESCE(SUM(o.shipping_total), 0)::float AS shipping,
        COALESCE(AVG(o.total), 0)::float          AS avg_ticket
      FROM sale_orders o
-     WHERE o.user_id = $1
+     WHERE o.tenant_id = $1
        AND ($2::timestamp IS NULL OR o.sold_at >= $2)
        AND ($3::timestamp IS NULL OR o.sold_at <= $3)`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
 
   const lines = lineRows[0];
@@ -41,7 +41,7 @@ export async function getSummary(userId, { from = null, to = null } = {}) {
   };
 }
 
-export async function getByProduct(userId, { from = null, to = null } = {}) {
+export async function getByProduct(ctx, { from = null, to = null } = {}) {
   const { rows } = await pool.query(
     `WITH per_product AS (
        SELECT
@@ -64,7 +64,7 @@ export async function getByProduct(userId, { from = null, to = null } = {}) {
        FROM sales s
        JOIN products p             ON p.id = s.product_id
        LEFT JOIN dynamic_categories c ON c.id = p.category_id
-       WHERE s.user_id = $1
+       WHERE s.tenant_id = $1
          AND ($2::timestamp IS NULL OR s.sold_at >= $2)
          AND ($3::timestamp IS NULL OR s.sold_at <= $3)
        GROUP BY p.id, c.name
@@ -88,12 +88,12 @@ export async function getByProduct(userId, { from = null, to = null } = {}) {
      FROM per_product pp
      CROSS JOIN medians m
      ORDER BY pp.revenue DESC`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
   return rows;
 }
 
-export async function getByMonth(userId, { from = null, to = null } = {}) {
+export async function getByMonth(ctx, { from = null, to = null } = {}) {
   const { rows } = await pool.query(
     `WITH lineas AS (
        SELECT
@@ -104,7 +104,7 @@ export async function getByMonth(userId, { from = null, to = null } = {}) {
          SUM(s.cost)::float             AS cost,
          SUM(s.margin)::float           AS margin
        FROM sales s
-       WHERE s.user_id = $1
+       WHERE s.tenant_id = $1
          AND ($2::timestamp IS NULL OR s.sold_at >= $2)
          AND ($3::timestamp IS NULL OR s.sold_at <= $3)
        GROUP BY 1
@@ -116,7 +116,7 @@ export async function getByMonth(userId, { from = null, to = null } = {}) {
          SUM(o.refunded)::float         AS refunded,
          AVG(o.total)::float            AS avg_ticket
        FROM sale_orders o
-       WHERE o.user_id = $1
+       WHERE o.tenant_id = $1
          AND ($2::timestamp IS NULL OR o.sold_at >= $2)
          AND ($3::timestamp IS NULL OR o.sold_at <= $3)
        GROUP BY 1
@@ -135,12 +135,12 @@ export async function getByMonth(userId, { from = null, to = null } = {}) {
      FROM lineas l
      FULL JOIN pedidos p USING (mes)
      ORDER BY mes`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
   return rows;
 }
 
-export async function getByChannel(userId, { from = null, to = null } = {}) {
+export async function getByChannel(ctx, { from = null, to = null } = {}) {
   const { rows } = await pool.query(
     `SELECT
        COALESCE(s.channel, 'Sin canal')  AS channel,
@@ -152,17 +152,17 @@ export async function getByChannel(userId, { from = null, to = null } = {}) {
         NULLIF(SUM(s.total / (1 + COALESCE(s.tax_rate, 0))), 0))::float
                                          AS margin_pct
      FROM sales s
-     WHERE s.user_id = $1
+     WHERE s.tenant_id = $1
        AND ($2::timestamp IS NULL OR s.sold_at >= $2)
        AND ($3::timestamp IS NULL OR s.sold_at <= $3)
      GROUP BY s.channel
      ORDER BY revenue DESC`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
   return rows;
 }
 
-export async function getByCategory(userId, { from = null, to = null } = {}) {
+export async function getByCategory(ctx, { from = null, to = null } = {}) {
   const { rows } = await pool.query(
     `SELECT
        COALESCE(c.name, 'Sin categoría') AS category,
@@ -176,12 +176,12 @@ export async function getByCategory(userId, { from = null, to = null } = {}) {
      FROM sales s
      JOIN products p                ON p.id = s.product_id
      LEFT JOIN dynamic_categories c ON c.id = p.category_id
-     WHERE s.user_id = $1
+     WHERE s.tenant_id = $1
        AND ($2::timestamp IS NULL OR s.sold_at >= $2)
        AND ($3::timestamp IS NULL OR s.sold_at <= $3)
      GROUP BY c.name
      ORDER BY revenue DESC`,
-    [userId, from, to],
+    [ctx.tenantId, from, to],
   );
   return rows;
 }
