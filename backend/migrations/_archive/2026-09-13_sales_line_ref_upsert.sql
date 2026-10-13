@@ -15,8 +15,6 @@
 -- init.sql solo corre en un volumen nuevo, así que esta migración adapta
 -- las bases de datos ya existentes (mismo patrón que las anteriores).
 
-BEGIN;
-
 -- ---------------------------------------------------------------------
 -- 1) Columna para la clave de negocio de la línea. NULLABLE: ventas por
 --    webhook u otras fuentes pueden no traer identificador de línea.
@@ -56,5 +54,3 @@ WHERE s.id = r.id
 CREATE UNIQUE INDEX IF NOT EXISTS uq_sales_user_line_ref
     ON sales (user_id, line_ref)
     WHERE line_ref IS NOT NULL;
-
-COMMIT;

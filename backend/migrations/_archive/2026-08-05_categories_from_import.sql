@@ -16,9 +16,7 @@
 --      automáticamente desde archivos, borrar una "que sobra" sería
 --      una pérdida de datos silenciosa. Se cambia a SET NULL: el
 --      producto queda "Sin categoría" (las queries ya usan LEFT JOIN
---      + COALESCE, así que toleran el NULL sin cambios).
-
-BEGIN;
+--      + COALESCE, así que toleran el NULL sin cambios)
 
 -- ---------------------------------------------------------------------
 -- 1) Dedupe preventivo: si un usuario tiene dos categorías con el mismo
@@ -77,5 +75,3 @@ ALTER TABLE products
   ADD CONSTRAINT products_category_id_fkey
   FOREIGN KEY (category_id) REFERENCES dynamic_categories(id)
   ON DELETE SET NULL;
-
-COMMIT;

@@ -3,9 +3,6 @@
 -- Permite el mismo SKU en varios almacenes/ubicaciones sin sumar su stock.
 -- init.sql solo corre en un volumen nuevo, así que esta migración adapta
 -- las bases de datos ya existentes.
-
-BEGIN;
-
 ALTER TABLE products
     ADD COLUMN IF NOT EXISTS warehouse VARCHAR(64) NOT NULL DEFAULT '';
 
@@ -19,4 +16,3 @@ ALTER TABLE products DROP CONSTRAINT IF EXISTS uq_product_sku;
 ALTER TABLE products
     ADD CONSTRAINT uq_product_identity UNIQUE (user_id, sku, warehouse, location);
 
-COMMIT;

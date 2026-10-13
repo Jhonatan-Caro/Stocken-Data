@@ -28,8 +28,6 @@
 -- adapta las bases de datos ya existentes (mismo patrón que
 -- 2026-07-13_product_warehouse_location.sql).
 
-BEGIN;
-
 -- =========================================
 -- SALE ORDERS (cabeceras de pedido)
 -- =========================================
@@ -121,5 +119,3 @@ ALTER TABLE sales
 -- Índices para los GROUP BY de estadísticas
 CREATE INDEX IF NOT EXISTS idx_sales_order_id ON sales (order_id);
 CREATE INDEX IF NOT EXISTS idx_sales_channel  ON sales (user_id, channel);
-
-COMMIT;
